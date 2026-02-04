@@ -4,6 +4,7 @@ from django.utils.deprecation import MiddlewareMixin
 from .models import User, Session
 from .utils import verify_jwt_token
 from django.conf import settings
+from django.utils import timezone
 
 
 class JWTAuthentication(BaseAuthentication):
@@ -22,10 +23,14 @@ class JWTAuthentication(BaseAuthentication):
         
         if not payload:
             raise AuthenticationFailed('Invalid or expired token')
+        
+        # Проверяем, что это access токен
+        if payload.get('type') != 'access':
+            raise AuthenticationFailed('Invalid token type')
             
         try:
-            session = Session.objects.get(token_jti=payload['jti'], is_active=True)
-            if not session.is_active or session.expires_at < timezone.now():
+            session = Session.objects.get(access_jti=payload['jti'], is_active=True)
+            if not session.is_active or session.access_expires_at < timezone.now():
                 raise AuthenticationFailed('Session expired')
                 
             user = session.user
@@ -49,10 +54,10 @@ class JWTAuthenticationMiddleware(MiddlewareMixin):
             token = auth_header.split(' ')[1]
             payload = verify_jwt_token(token)
             
-            if payload:
+            if payload and payload.get('type') == 'access':
                 try:
-                    session = Session.objects.get(token_jti=payload['jti'], is_active=True)
-                    if session.is_active and session.expires_at >= timezone.now():
+                    session = Session.objects.get(access_jti=payload['jti'], is_active=True)
+                    if session.is_active and session.access_expires_at >= timezone.now():
                         user = session.user
                         if user.is_active:
                             request.user = user
@@ -61,6 +66,3 @@ class JWTAuthenticationMiddleware(MiddlewareMixin):
                     pass
         
         return None
-
-
-from django.utils import timezone

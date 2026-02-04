@@ -17,10 +17,10 @@ class JWTAuthenticationMiddleware(MiddlewareMixin):
             token = auth_header.split(' ')[1]
             payload = verify_jwt_token(token)
             
-            if payload:
+            if payload and payload.get('type') == 'access':
                 try:
-                    session = Session.objects.get(token_jti=payload['jti'], is_active=True)
-                    if session.is_active and session.expires_at >= timezone.now():
+                    session = Session.objects.get(access_jti=payload['jti'], is_active=True)
+                    if session.is_active and session.access_expires_at >= timezone.now():
                         user = session.user
                         if user.is_active:
                             request.user = user

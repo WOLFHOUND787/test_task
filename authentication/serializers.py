@@ -6,10 +6,11 @@ from django.utils import timezone
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     password_confirm = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(choices=['user', 'manager'], default='user')
     
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'patronymic', 'password', 'password_confirm']
+        fields = ['email', 'full_name', 'password', 'password_confirm', 'role']
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -18,7 +19,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         validated_data.pop('password_confirm')
+        role_name = validated_data.pop('role', 'user')
+        
         user = User.objects.create_user(**validated_data)
+        
+        # Назначаем выбранную роль
+        try:
+            role = Role.objects.get(name=role_name)
+            UserRole.objects.create(user=user, role=role)
+        except Role.DoesNotExist:
+            pass
+        
         return user
 
 

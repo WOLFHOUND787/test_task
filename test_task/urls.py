@@ -16,9 +16,44 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from django.http import HttpResponse
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('authentication.urls')),
     path('api/business/', include('mock_business.urls')),
+]
+
+# Обслуживание статических файлов в режиме отладки
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Обслуживание фронтенда
+def frontend_view(request):
+    # Проверяем авторизацию и показываем нужную страницу
+    token = request.COOKIES.get('accessToken') or request.headers.get('Authorization', '').replace('Bearer ', '')
+    
+    if token:
+        # Если есть токен, показываем маркетплейс
+        try:
+            from authentication.models import Session
+            from django.utils import timezone
+            import jwt
+            from django.conf import settings
+            
+            payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+            session = Session.objects.get(access_jti=payload['jti'], is_active=True)
+            
+            if session.is_active and session.access_expires_at >= timezone.now():
+                return HttpResponse(open('templates/marketplace.html').read(), content_type='text/html')
+        except:
+            pass
+    
+    # Если нет токена или он недействителен, показываем страницу входа
+    return HttpResponse(open('templates/marketplace.html').read(), content_type='text/html')
+
+urlpatterns += [
+    path('', frontend_view),
 ]

@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛍️ Маркетплейс</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hide { display: none; }
+        .card { margin-bottom: 20px; }
+        .shop-card { transition: transform 0.2s; cursor: pointer; }
+        .shop-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .product-card { transition: transform 0.2s; }
+        .product-card:hover { transform: translateY(-2px); }
+        .navbar-brand { font-weight: bold; }
+        .user-info { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .shop-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            margin: -15px -15px 15px -15px;
+        }
+        .order-item {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .order-item.pending {
+            border-left-color: #ffc107;
+        }
+        .order-item.completed {
+            border-left-color: #28a745;
+        }
+        .cart-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">🛍️ Маркетплейс</a>
+            <div class="navbar-nav ms-auto" id="authButtons">
+                <button class="btn btn-outline-light me-2" onclick="showProfile()" id="profileBtn" style="display: none;">👤 Профиль</button>
+                <button class="btn btn-outline-danger" onclick="logout()" id="logoutBtn" style="display: none;">🚪 Выход</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Форма входа -->
+        <div id="loginSection" class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" id="authTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">Вход</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab">Регистрация</button>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content" id="authTabContent">
+                            <!-- Вход -->
+                            <div class="tab-pane fade show active" id="login" role="tabpanel">
+                                <form id="loginForm">
+                                    <div class="mb-3">
+                                        <label for="email" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="email" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="password" class="form-label">Пароль</label>
+                                        <input type="password" class="form-control" id="password" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Войти</button>
+                                </form>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        Тестовые аккаунты:<br>
+                                        • admin@example.com / admin123 (администратор)<br>
+                                        • manager@example.com / manager123 (менеджер)<br>
+                                        • user@example.com / user123 (пользователь)
+                                    </small>
+                                </div>
+                            </div>
+                            <!-- Регистрация -->
+                            <div class="tab-pane fade" id="register" role="tabpanel">
+                                <form id="registerForm">
+                                    <div class="mb-3">
+                                        <label for="regEmail" class="form-label">Email</label>
+                                        <input type="email" class="form-control" id="regEmail" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="regFullName" class="form-label">Полное имя</label>
+                                        <input type="text" class="form-control" id="regFullName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="regPassword" class="form-label">Пароль</label>
+                                        <input type="password" class="form-control" id="regPassword" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="regPasswordConfirm" class="form-label">Подтверждение пароля</label>
+                                        <input type="password" class="form-control" id="regPasswordConfirm" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="regRole" class="form-label">Роль</label>
+                                        <select class="form-select" id="regRole">
+                                            <option value="user">Пользователь</option>
+                                            <option value="manager">Менеджер</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-success w-100">Зарегистрироваться</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Основной контент -->
+        <div id="mainSection" class="hide">
+            <!-- Навигация по разделам -->
+            <div class="btn-group mb-4" role="group">
+                <button type="button" class="btn btn-outline-primary" onclick="showShops()">🏪 Магазины</button>
+                <button type="button" class="btn btn-outline-primary" id="ordersBtn" onclick="showOrders()">📦 Мои заказы</button>
+                <button type="button" class="btn btn-outline-primary" id="manageShopBtn" onclick="showManageShop()" style="display: none;">⚙️ Управление магазином</button>
+                <button type="button" class="btn btn-outline-primary" id="usersBtn" onclick="showUsers()" style="display: none;">👥 Пользователи</button>
+            </div>
+
+            <!-- Магазины -->
+            <div id="shopsSection" class="hide">
+                <h3>🏪 Доступные магазины</h3>
+                <div id="shopsList" class="row"></div>
+            </div>
+
+            <!-- Продукты магазина -->
+            <div id="productsSection" class="hide">
+                <div class="shop-header">
+                    <h4 id="shopName"></h4>
+                    <p id="shopInfo"></p>
+                    <button class="btn btn-light btn-sm" onclick="showShops()">← Назад к магазинам</button>
+                </div>
+                <div id="productsList" class="row mt-3"></div>
+            </div>
+
+            <!-- Заказы -->
+            <div id="ordersSection" class="hide">
+                <h3>📦 Мои заказы</h3>
+                <div id="ordersList"></div>
+            </div>
+
+            <!-- Управление магазином (для менеджеров) -->
+            <div id="manageShopSection" class="hide">
+                <h3>⚙️ Управление магазином</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Мой магазин</h5>
+                            </div>
+                            <div class="card-body" id="myShopInfo">
+                                <p class="text-muted">Загрузка информации о магазине...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Добавить продукт</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="addProductForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Название</label>
+                                        <input type="text" class="form-control" id="productName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Описание</label>
+                                        <textarea class="form-control" id="productDescription"></textarea>
+                                    </div>
+                                    <div class="mb-3" id="shopSelectContainer" style="display: none;">
+                                        <label class="form-label">Магазин</label>
+                                        <select class="form-control" id="productShop">
+                                            <option value="">Выберите магазин...</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Цена</label>
+                                        <input type="number" class="form-control" id="productPrice" step="0.01" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Добавить продукт</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <h5>📦 Заказы на мои товары</h5>
+                    <div id="shopOrders"></div>
+                </div>
+            </div>
+
+            <!-- Пользователи (только для админа) -->
+            <div id="usersSection" class="hide">
+                <h3>👥 Управление пользователями</h3>
+                <div id="usersList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно -->
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-labelledby="dataModalLabel">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dataModalLabel">Данные</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="dataModalContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api';
+        let currentUser = null;
+        let currentShopId = null;
+        let accessToken = localStorage.getItem('accessToken');
+
+        // Проверка токена при загрузке
+        window.onload = function() {
+            if (accessToken) {
+                checkToken();
+            } else {
+                showLogin();
+            }
+        };
+
+        // Глобальная функция для выполнения запросов с автообновлением токена
+        async function authenticatedFetch(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            };
+            
+            const response = await fetch(url, { ...options, ...defaultOptions });
+            
+            // Если токен истек (401), пробуем обновить
+            if (response.status === 401) {
+                try {
+                    const refreshResponse = await fetch(`${API_BASE}/auth/refresh/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            refresh: localStorage.getItem('refreshToken')
+                        })
+                    });
+                    
+                    if (refreshResponse.ok) {
+                        const data = await refreshResponse.json();
+                        accessToken = data.access;
+                        localStorage.setItem('accessToken', accessToken);
+                        
+                        // Повторяем оригинальный запрос с новым токеном
+                        defaultOptions.headers['Authorization'] = `Bearer ${accessToken}`;
+                        return fetch(url, { ...options, ...defaultOptions });
+                    } else {
+                        // Если не удалось обновить токен, разлогиниваем
+                        localStorage.removeItem('accessToken');
+                        localStorage.removeItem('refreshToken');
+                        accessToken = null;
+                        currentUser = null;
+                        showLogin();
+                        throw new Error('Token expired');
+                    }
+                } catch (error) {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    accessToken = null;
+                    currentUser = null;
+                    showLogin();
+                    throw new Error('Token refresh failed');
+                }
+            }
+            
+            return response;
+        }
+
+        async function checkToken() {
+            try {
+                const response = await authenticatedFetch(`${API_BASE}/auth/profile/`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data;
+                    showMain();
+                } else {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    showLogin();
+                }
+            } catch (error) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('loginSection').classList.remove('hide');
+            document.getElementById('mainSection').classList.add('hide');
+            document.getElementById('profileBtn').style.display = 'none';  // Скрываем профиль
+            document.getElementById('logoutBtn').style.display = 'none';  // Скрываем выход
+        }
+
+        function showMain() {
+            document.getElementById('loginSection').classList.add('hide');
+            document.getElementById('mainSection').classList.remove('hide');
+            document.getElementById('profileBtn').style.display = 'block';  // Показываем профиль
+            document.getElementById('logoutBtn').style.display = 'block';  // Показываем выход
+            
+            // Показываем нужные кнопки в зависимости от роли
+            const isManager = currentUser.roles.some(r => r.name === 'manager');
+            const isAdmin = currentUser.roles.some(r => r.name === 'admin');
+            
+            document.getElementById('manageShopBtn').style.display = isManager ? 'block' : 'none';
+            document.getElementById('usersBtn').style.display = isAdmin ? 'block' : 'none';
+            
+            // Менеджерам не показываем "мои заказы"
+            document.getElementById('ordersBtn').style.display = isManager ? 'none' : 'block';
+            
+            // По умолчанию показываем магазины
+            showShops();
+        }
+
+        // Вход
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    accessToken = data.access_token;
+                    localStorage.setItem('accessToken', accessToken);
+                    if (data.refresh_token) {
+                        localStorage.setItem('refreshToken', data.refresh_token);
+                    }
+                    currentUser = data.user;
+                    showMain();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка входа: ' + (error.detail || 'Неверные данные'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        });
+
+        // Регистрация
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('regEmail').value;
+            const full_name = document.getElementById('regFullName').value;
+            const password = document.getElementById('regPassword').value;
+            const password_confirm = document.getElementById('regPasswordConfirm').value;
+            const role = document.getElementById('regRole').value;
+            
+            if (password !== password_confirm) {
+                alert('Пароли не совпадают');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, full_name, password, password_confirm, role })
+                });
+                
+                if (response.ok) {
+                    alert('Регистрация успешна! Теперь войдите в систему.');
+                    document.getElementById('register-tab').click();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка регистрации: ' + JSON.stringify(error));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        });
+
+        // Показать магазины
+        async function showShops() {
+            hideAllSections();
+            document.getElementById('shopsSection').classList.remove('hide');
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/shops/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const shopsList = document.getElementById('shopsList');
+                    shopsList.innerHTML = '';
+                    
+                    data.shops.forEach(shop => {
+                        const shopCard = `
+                            <div class="col-md-4 mb-3">
+                                <div class="card shop-card" onclick="showShopProducts('${shop.id}')">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${shop.name}</h5>
+                                        <p class="card-text">
+                                            📍 ${shop.address}<br>
+                                            📞 ${shop.phone}
+                                        </p>
+                                        <button class="btn btn-primary">Перейти к товарам</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        shopsList.innerHTML += shopCard;
+                    });
+                }
+            } catch (error) {
+                alert('Ошибка загрузки магазинов');
+            }
+        }
+
+        // Показать продукты магазина
+        async function showShopProducts(shopId) {
+            currentShopId = shopId;
+            hideAllSections();
+            document.getElementById('productsSection').classList.remove('hide');
+            
+            try {
+                // Получаем информацию о магазине
+                const shopsResponse = await fetch(`${API_BASE}/business/shops/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (shopsResponse.ok) {
+                    const shopsData = await shopsResponse.json();
+                    const shop = shopsData.shops.find(s => s.id === shopId);
+                    if (shop) {
+                        document.getElementById('shopName').textContent = shop.name;
+                        document.getElementById('shopInfo').textContent = `${shop.address} • ${shop.phone}`;
+                    }
+                }
+                
+                // Получаем продукты магазина
+                const productsResponse = await fetch(`${API_BASE}/business/shops/${shopId}/products/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (productsResponse.ok) {
+                    const data = await productsResponse.json();
+                    const productsList = document.getElementById('productsList');
+                    productsList.innerHTML = '';
+                    
+                    data.products.forEach(product => {
+                        // Проверяем что текущий пользователь не менеджер
+                        const isManager = currentUser.roles && currentUser.roles.includes('manager');
+                        const orderButton = isManager ? '' : `<button class="btn btn-success" onclick="showOrderModal('${product.id}', '${product.name}', ${product.price})">🛒 Заказать</button>`;
+                        
+                        const productCard = `
+                            <div class="col-md-4 mb-3">
+                                <div class="card product-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${product.name}</h5>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-success">₽${product.price}</span>
+                                        ${orderButton}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        productsList.innerHTML += productCard;
+                    });
+                }
+            } catch (error) {
+                alert('Ошибка загрузки продуктов');
+            }
+        }
+
+        // Создать заказ
+        async function createOrder(productId, productName, price, quantity) {
+            try {
+                const response = await fetch(`${API_BASE}/business/orders/create/`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        product_id: productId,
+                        quantity: quantity
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Заказ успешно создан!');
+                    showOrders();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка создания заказа: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Показать модальное окно для заказа
+        function showOrderModal(productId, productName, price) {
+            const modalContent = `
+                <form id="orderForm">
+                    <div class="mb-3">
+                        <label class="form-label">Продукт</label>
+                        <input type="text" class="form-control" value="${productName}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Цена за единицу</label>
+                        <input type="text" class="form-control" value="₽${price}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Количество</label>
+                        <input type="number" class="form-control" id="quantityInput" min="1" value="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Общая стоимость</label>
+                        <input type="text" class="form-control" id="totalPriceInput" value="₽${price}" readonly>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать заказ</button>
+                </form>
+            `;
+            
+            document.getElementById('dataModalLabel').textContent = 'Создание заказа';
+            document.getElementById('dataModalContent').innerHTML = modalContent;
+            
+            const modal = new bootstrap.Modal(document.getElementById('dataModal'));
+            modal.show();
+            
+            // Обновление общей стоимости при изменении количества
+            document.getElementById('quantityInput').addEventListener('input', function() {
+                const quantity = parseInt(this.value) || 0;
+                const totalPrice = price * quantity;
+                document.getElementById('totalPriceInput').value = `₽${totalPrice}`;
+            });
+            
+            // Обработка формы
+            document.getElementById('orderForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const quantity = parseInt(document.getElementById('quantityInput').value);
+                modal.hide();
+                createOrder(productId, productName, price, quantity);
+            });
+        }
+
+        // Показать заказы
+        async function showOrders() {
+            hideAllSections();
+            document.getElementById('ordersSection').classList.remove('hide');
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/orders/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const ordersList = document.getElementById('ordersList');
+                    ordersList.innerHTML = '';
+                    
+                    if (data.orders.length === 0) {
+                        ordersList.innerHTML = '<p class="text-muted">У вас пока нет заказов</p>';
+                        return;
+                    }
+                    
+                    data.orders.forEach(order => {
+                        let statusText = '';
+                        let buttons = '';
+                        
+                        if (order.status === 'pending') {
+                            statusText = '⏳ В обработке';
+                            buttons = `<button class="btn btn-sm btn-danger" onclick="cancelOrder('${order.id}')">Отменить</button>`;
+                        } else if (order.status === 'completed') {
+                            statusText = '✅ Выполнен';
+                            buttons = '';
+                        } else if (order.status === 'cancelled') {
+                            statusText = '❌ Отменен';
+                            buttons = `<button class="btn btn-sm btn-danger" onclick="deleteOrder('${order.id}')">Удалить</button>`;
+                        }
+                        
+                        const orderItem = `
+                            <div class="order-item ${order.status}">
+                                <h6>${order.product_name}</h6>
+                                <p class="mb-1">
+                                    Количество: ${order.quantity}<br>
+                                    Сумма: ₽${order.total_price}<br>
+                                    Статус: ${statusText}<br>
+                                    Дата: ${new Date(order.created_at).toLocaleDateString()}
+                                </p>
+                                ${buttons}
+                            </div>
+                        `;
+                        ordersList.innerHTML += orderItem;
+                    });
+                }
+            } catch (error) {
+                alert('Ошибка загрузки заказов');
+            }
+        }
+
+        // Показать управление магазином (для менеджеров)
+        async function showManageShop() {
+            hideAllSections();
+            document.getElementById('manageShopSection').classList.remove('hide');
+            
+            try {
+                // Загружаем магазины
+                const shopsResponse = await fetch(`${API_BASE}/business/shops/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (shopsResponse.ok) {
+                    const shopsData = await shopsResponse.json();
+                    const myShops = shopsData.shops.filter(shop => shop.owner_id === currentUser.id);
+                    
+                    // Заполняем форму добавления продукта
+                    const shopSelect = document.getElementById('productShop');
+                    const shopSelectContainer = document.getElementById('shopSelectContainer');
+                    
+                    if (shopSelect && shopSelectContainer) {
+                        shopSelect.innerHTML = '<option value="">Выберите магазин...</option>';
+                        
+                        if (myShops.length > 1) {
+                            // Если магазинов несколько, показываем выбор
+                            shopSelectContainer.style.display = 'block';
+                            myShops.forEach(shop => {
+                                const option = document.createElement('option');
+                                option.value = shop.id;
+                                option.textContent = shop.name;
+                                shopSelect.appendChild(option);
+                            });
+                        } else if (myShops.length === 1) {
+                            // Если магазин один, скрываем выбор
+                            shopSelectContainer.style.display = 'none';
+                        } else {
+                            // Если магазинов нет
+                            shopSelectContainer.style.display = 'none';
+                        }
+                    }
+                    
+                    // Показываем информацию о магазинах
+                    const myShopInfo = document.getElementById('myShopInfo');
+                    if (myShops.length > 0) {
+                        let shopsHtml = '';
+                        myShops.forEach(shop => {
+                            shopsHtml += `
+                                <div class="card mb-2">
+                                    <div class="card-body">
+                                        <h6>${shop.name}</h6>
+                                        <p class="mb-1">
+                                            📍 ${shop.address}<br>
+                                            📞 ${shop.phone}<br>
+                                            📅 Создан: ${new Date(shop.created_at).toLocaleDateString()}
+                                        </p>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editShop('${shop.id}')">Редактировать</button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        myShopInfo.innerHTML = shopsHtml;
+                    } else {
+                        myShopInfo.innerHTML = `
+                            <p class="text-muted">У вас пока нет магазина</p>
+                            <button class="btn btn-primary" onclick="showCreateShopForm()">Создать магазин</button>
+                        `;
+                    }
+                }
+                
+                // Загружаем заказы на товары менеджера
+                const ordersResponse = await fetch(`${API_BASE}/business/orders/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (ordersResponse.ok) {
+                    const ordersData = await ordersResponse.json();
+                    const shopOrdersDiv = document.getElementById('shopOrders');
+                    
+                    if (ordersData.orders.length === 0) {
+                        shopOrdersDiv.innerHTML = '<p class="text-muted">Заказов на ваши товары пока нет</p>';
+                    } else {
+                        shopOrdersDiv.innerHTML = '';
+                        ordersData.orders.forEach(order => {
+                            let statusText = '';
+                            let buttons = '';
+                            
+                            if (order.status === 'pending') {
+                                statusText = '⏳ В обработке';
+                                buttons = `<button class="btn btn-sm btn-success" onclick="completeOrder('${order.id}')">Выполнить</button> <button class="btn btn-sm btn-danger" onclick="cancelOrder('${order.id}')">Отменить</button>`;
+                            } else if (order.status === 'completed') {
+                                statusText = '✅ Выполнен';
+                                buttons = '';
+                            } else if (order.status === 'cancelled') {
+                                statusText = '❌ Отменен';
+                                buttons = '';
+                            }
+                            
+                            const orderItem = `
+                                <div class="order-item ${order.status}">
+                                    <h6>${order.product_name}</h6>
+                                    <p class="mb-1">
+                                        Количество: ${order.quantity}<br>
+                                        Сумма: ₽${order.total_price}<br>
+                                        Статус: ${statusText}<br>
+                                        Дата: ${new Date(order.created_at).toLocaleDateString()}
+                                    </p>
+                                    ${buttons}
+                                </div>
+                            `;
+                            shopOrdersDiv.innerHTML += orderItem;
+                        });
+                    }
+                }
+            } catch (error) {
+                alert('Ошибка загрузки данных магазина');
+            }
+        }
+
+        // Показать форму создания магазина
+        function showCreateShopForm() {
+            const modalContent = `
+                <form id="createShopForm">
+                    <div class="mb-3">
+                        <label class="form-label">Название магазина</label>
+                        <input type="text" class="form-control" id="shopNameInput" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Адрес</label>
+                        <input type="text" class="form-control" id="shopAddressInput" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Телефон</label>
+                        <input type="text" class="form-control" id="shopPhoneInput" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Создать магазин</button>
+                </form>
+            `;
+            
+            document.getElementById('dataModalLabel').textContent = 'Создание магазина';
+            document.getElementById('dataModalContent').innerHTML = modalContent;
+            
+            const modal = new bootstrap.Modal(document.getElementById('dataModal'));
+            modal.show();
+            
+            // Обработчик создания магазина
+            document.getElementById('createShopForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                await createShop();
+            });
+        }
+
+        // Создать магазин
+        async function createShop() {
+            const nameElement = document.getElementById('shopNameInput');
+            const addressElement = document.getElementById('shopAddressInput');
+            const phoneElement = document.getElementById('shopPhoneInput');
+            
+            // Проверяем что элементы существуют
+            if (!nameElement || !addressElement || !phoneElement) {
+                alert('Форма не найдена. Попробуйте снова.');
+                return;
+            }
+            
+            const name = nameElement.value.trim();
+            const address = addressElement.value.trim();
+            const phone = phoneElement.value.trim();
+            
+            console.log('Creating shop:', { name, address, phone }); // Debug
+            
+            if (!name || !address || !phone) {
+                alert('Все поля обязательны для заполнения');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/shops/create/`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        address: address,
+                        phone: phone
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Магазин успешно создан!');
+                    bootstrap.Modal.getInstance(document.getElementById('dataModal')).hide();
+                    showManageShop();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка создания магазина: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                console.error('Error creating shop:', error);
+                alert('Ошибка сети');
+            }
+        }
+
+        // Редактировать магазин
+        async function editShop(shopId) {
+            try {
+                // Получаем текущие данные магазина
+                const shopsResponse = await fetch(`${API_BASE}/business/shops/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (shopsResponse.ok) {
+                    const shopsData = await shopsResponse.json();
+                    const shop = shopsData.shops.find(s => s.id === shopId);
+                    
+                    if (shop) {
+                        const modalContent = `
+                            <form id="editShopForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Название магазина</label>
+                                    <input type="text" class="form-control" id="editShopName" value="${shop.name}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Адрес</label>
+                                    <input type="text" class="form-control" id="editShopAddress" value="${shop.address}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Телефон</label>
+                                    <input type="text" class="form-control" id="editShopPhone" value="${shop.phone}" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                            </form>
+                        `;
+                        
+                        document.getElementById('dataModalLabel').textContent = 'Редактирование магазина';
+                        document.getElementById('dataModalContent').innerHTML = modalContent;
+                        
+                        const modal = new bootstrap.Modal(document.getElementById('dataModal'));
+                        modal.show();
+                        
+                        // Обработчик редактирования магазина
+                        document.getElementById('editShopForm').addEventListener('submit', async function(e) {
+                            e.preventDefault();
+                            await updateShop(shopId);
+                        });
+                    }
+                }
+            } catch (error) {
+                alert('Ошибка загрузки данных магазина');
+            }
+        }
+
+        // Обновить магазин
+        async function updateShop(shopId) {
+            const name = document.getElementById('editShopName').value;
+            const address = document.getElementById('editShopAddress').value;
+            const phone = document.getElementById('editShopPhone').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/shops/${shopId}/update/`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        address: address,
+                        phone: phone
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Магазин успешно обновлен!');
+                    bootstrap.Modal.getInstance(document.getElementById('dataModal')).hide();
+                    showManageShop();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка обновления магазина: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Добавить продукт
+        document.getElementById('addProductForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('productName').value;
+            const description = document.getElementById('productDescription').value;
+            const price = parseFloat(document.getElementById('productPrice').value);
+            const shopSelect = document.getElementById('productShop');
+            const shopId = shopSelect ? shopSelect.value : null;
+            
+            try {
+                const requestBody = {
+                    name: name,
+                    description: description,
+                    price: price
+                };
+                
+                // Добавляем shop_id только если есть выбор магазина
+                if (shopId) {
+                    requestBody.shop_id = shopId;
+                }
+                
+                const response = await fetch(`${API_BASE}/business/products/create/`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (response.ok) {
+                    alert('Продукт успешно добавлен!');
+                    document.getElementById('addProductForm').reset();
+                    // Обновляем список продуктов если мы в секции продуктов
+                    if (currentShopId) {
+                        showShopProducts(currentShopId);
+                    }
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка добавления продукта: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        });
+
+        // Показать пользователей (для админа)
+        async function showUsers() {
+            hideAllSections();
+            document.getElementById('usersSection').classList.remove('hide');
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/users/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const usersList = document.getElementById('usersList');
+                    usersList.innerHTML = '';
+                    
+                    data.users.forEach(user => {
+                        const userItem = `
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6>${user.full_name || user.email}</h6>
+                                    <p class="mb-1">
+                                        📧 ${user.email}<br>
+                                        🎭 Роль: ${user.roles.map(r => r.name).join(', ')}<br>
+                                        📅 Создан: ${new Date(user.created_at).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                        usersList.innerHTML += userItem;
+                    });
+                }
+            } catch (error) {
+                alert('Ошибка загрузки пользователей');
+            }
+        }
+
+        // Показать профиль
+        async function showProfile() {
+            try {
+                const response = await fetch(`${API_BASE}/business/profile/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const modalContent = `
+                        <form id="profileForm">
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" value="${data.email}" readonly>
+                                <small class="text-muted">Email нельзя изменить</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Полное имя</label>
+                                <input type="text" class="form-control" value="${data.full_name || ''}" id="profileFullName">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Роль</label>
+                                <input type="text" class="form-control" value="${data.roles ? data.roles.map(r => r.name).join(', ') : 'Загрузка...'}" readonly>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Дата регистрации</label>
+                                <input type="text" class="form-control" value="${data.created_at ? new Date(data.created_at).toLocaleDateString() : 'Н/Д'}" readonly>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Сохранить</button>
+                            <button type="button" class="btn btn-danger ms-2" onclick="deleteAccount()">Удалить аккаунт</button>
+                        </form>
+                    `;
+                    
+                    document.getElementById('dataModalLabel').textContent = 'Редактирование профиля';
+                    document.getElementById('dataModalContent').innerHTML = modalContent;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('dataModal'));
+                    modal.show();
+                    
+                    // Обработчик сохранения профиля
+                    document.getElementById('profileForm').addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        await updateProfile();
+                    });
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка загрузки профиля: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети при загрузке профиля');
+            }
+        }
+
+        // Обновить профиль
+        async function updateProfile() {
+            try {
+                const fullName = document.getElementById('profileFullName').value;
+                
+                const response = await fetch(`${API_BASE}/business/profile/`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        full_name: fullName
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Профиль успешно обновлен!');
+                    bootstrap.Modal.getInstance(document.getElementById('dataModal')).hide();
+                    checkToken(); // Обновляем данные пользователя
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка обновления профиля: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Удалить аккаунт
+        async function deleteAccount() {
+            if (!confirm('Вы уверены, что хотите удалить свой аккаунт? Это действие необратимо.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/profile/`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    alert('Аккаунт успешно удален');
+                    localStorage.removeItem('accessToken');
+                    showLogin();
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка удаления аккаунта: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Выполнить заказ
+        async function completeOrder(orderId) {
+            if (!confirm('Вы уверены, что хотите выполнить этот заказ?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/orders/${orderId}/complete/`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    alert('Заказ успешно выполнен!');
+                    showManageShop(); // Обновляем список заказов
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка выполнения заказа: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Отменить заказ
+        async function cancelOrder(orderId) {
+            if (!confirm('Вы уверены, что хотите отменить этот заказ?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/orders/${orderId}/cancel/`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    alert('Заказ успешно отменен!');
+                    showOrders(); // Обновляем список заказов
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка отмены заказа: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Удалить заказ
+        async function deleteOrder(orderId) {
+            if (!confirm('Вы уверены, что хотите удалить этот заказ?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/orders/${orderId}/delete/`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    alert('Заказ успешно удален!');
+                    showOrders(); // Обновляем список заказов
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка удаления заказа: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Выход
+        function logout() {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            accessToken = null;
+            currentUser = null;
+            showLogin();
+        }
+
+        // Скрыть все секции
+        function hideAllSections() {
+            document.getElementById('shopsSection').classList.add('hide');
+            document.getElementById('productsSection').classList.add('hide');
+            document.getElementById('ordersSection').classList.add('hide');
+            document.getElementById('manageShopSection').classList.add('hide');
+            document.getElementById('usersSection').classList.add('hide');
+        }
+    </script>
+</body>
+</html>

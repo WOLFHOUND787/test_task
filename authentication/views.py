@@ -12,7 +12,7 @@ from .serializers import (
     UserUpdateSerializer, RoleSerializer, BusinessElementSerializer,
     AccessRoleRuleSerializer, UserRoleSerializer
 )
-from .utils import generate_jwt_token
+from .utils import generate_jwt_tokens, verify_refresh_token
 from .authorization import check_user_permission, CustomObjectPermission
 
 
@@ -48,20 +48,25 @@ def login_view(request):
     
     user = serializer.validated_data['user']
     
-    # Генерируем JWT токен
-    token, jti = generate_jwt_token(user.id)
+    # Генерируем access и refresh токены
+    access_token, refresh_token, access_jti, refresh_jti = generate_jwt_tokens(user.id)
     
     # Создаем сессию
-    expires_at = timezone.now() + timedelta(seconds=settings.JWT_ACCESS_TOKEN_LIFETIME)
+    access_expires_at = timezone.now() + timedelta(minutes=15)
+    refresh_expires_at = timezone.now() + timedelta(days=7)
     session = Session.objects.create(
         user=user,
-        token_jti=jti,
-        expires_at=expires_at
+        access_jti=access_jti,
+        refresh_jti=refresh_jti,
+        access_expires_at=access_expires_at,
+        refresh_expires_at=refresh_expires_at
     )
     
     return Response({
-        'token': token,
-        'expires_at': expires_at,
+        'access_token': access_token,
+        'refresh_token': refresh_token,
+        'access_expires_at': access_expires_at,
+        'refresh_expires_at': refresh_expires_at,
         'user': UserProfileSerializer(user).data
     })
 
@@ -83,6 +88,63 @@ def logout_view(request):
         return Response(
             {'error': 'Logout failed'},
             status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def refresh_token_view(request):
+    """Обновление access токена через refresh токен"""
+    refresh_token = request.data.get('refresh_token')
+    
+    if not refresh_token:
+        return Response(
+            {'error': 'Refresh token required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Проверяем refresh токен
+    payload = verify_refresh_token(refresh_token)
+    if not payload:
+        return Response(
+            {'error': 'Invalid or expired refresh token'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
+    try:
+        # Находим сессию по refresh_jti
+        session = Session.objects.get(refresh_jti=payload['jti'], is_active=True)
+        
+        # Проверяем, что refresh токен еще не истек
+        if session.refresh_expires_at < timezone.now():
+            session.is_active = False
+            session.save()
+            return Response(
+                {'error': 'Refresh token expired'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Генерируем новую пару токенов
+        new_access_token, new_refresh_token, new_access_jti, new_refresh_jti = generate_jwt_tokens(session.user.id)
+        
+        # Обновляем сессию
+        session.access_jti = new_access_jti
+        session.refresh_jti = new_refresh_jti
+        session.access_expires_at = timezone.now() + timedelta(minutes=15)
+        session.refresh_expires_at = timezone.now() + timedelta(days=7)
+        session.save()
+        
+        return Response({
+            'access_token': new_access_token,
+            'refresh_token': new_refresh_token,
+            'access_expires_at': session.access_expires_at,
+            'refresh_expires_at': session.refresh_expires_at,
+        })
+        
+    except Session.DoesNotExist:
+        return Response(
+            {'error': 'Invalid session'},
+            status=status.HTTP_401_UNAUTHORIZED
         )
 
 

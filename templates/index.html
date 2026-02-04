@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Маркетплейс</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hide { display: none; }
+        .card { margin-bottom: 20px; }
+        .shop-card { transition: transform 0.2s; cursor: pointer; }
+        .shop-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .product-card { transition: transform 0.2s; }
+        .product-card:hover { transform: translateY(-2px); }
+        .navbar-brand { font-weight: bold; }
+        .user-info { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .shop-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            margin: -15px -15px 15px -15px;
+        }
+        .order-item {
+            border-left: 4px solid #007bff;
+            padding-left: 15px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .order-item.pending {
+            border-left-color: #ffc107;
+        }
+        .order-item.completed {
+            border-left-color: #28a745;
+        }
+        .cart-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">�️ Маркетплейс</a>
+            <div class="navbar-nav ms-auto">
+                <button class="btn btn-outline-light me-2" onclick="showProfile()">👤 Профиль</button>
+                <button class="btn btn-outline-danger" onclick="logout()">🚪 Выход</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Форма входа -->
+        <div id="loginSection" class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">Вход в систему</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Пароль</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Войти</button>
+                        </form>
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                Тестовые аккаунты:<br>
+                                • admin@example.com / admin123 (администратор)<br>
+                                • manager@example.com / manager123 (менеджер)<br>
+                                • user@example.com / user123 (пользователь)
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Основной контент -->
+        <div id="mainSection" class="hide">
+            <!-- Информация о пользователе -->
+            <div id="userInfo" class="user-info hide">
+                <h4>👤 Информация о пользователе</h4>
+                <div id="userDetails"></div>
+            </div>
+
+            <!-- Права доступа -->
+            <div id="permissionsSection" class="card hide">
+                <div class="card-header">
+                    <h5 class="mb-0">🔑 Права доступа</h5>
+                </div>
+                <div class="card-body">
+                    <div id="permissionsList"></div>
+                </div>
+            </div>
+
+            <!-- Ресурсы -->
+            <div id="resourcesSection" class="hide">
+                <h4 class="mb-4">📊 Доступные ресурсы</h4>
+                <div class="row" id="resourcesList"></div>
+            </div>
+        </div>
+
+        <!-- Сообщения -->
+        <div id="message" class="alert hide"></div>
+    </div>
+
+    <!-- Модальное окно для отображения данных -->
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-labelledby="dataModalLabel">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dataModalLabel">Данные ресурса</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="dataModalContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api';
+        let accessToken = localStorage.getItem('accessToken');
+        let refreshToken = localStorage.getItem('refreshToken');
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            if (accessToken) {
+                checkToken();
+            } else {
+                showLogin();
+            }
+        });
+
+        // Проверка токена
+        async function checkToken() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/profile/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    showMain();
+                } else {
+                    await refreshAccessToken();
+                }
+            } catch (error) {
+                showLogin();
+            }
+        }
+
+        // Обновление токена
+        async function refreshAccessToken() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/refresh/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    accessToken = data.access_token;
+                    refreshToken = data.refresh_token;
+                    localStorage.setItem('accessToken', accessToken);
+                    localStorage.setItem('refreshToken', refreshToken);
+                    showMain();
+                } else {
+                    showLogin();
+                }
+            } catch (error) {
+                showLogin();
+            }
+        }
+
+        // Вход
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    accessToken = data.access_token;
+                    refreshToken = data.refresh_token;
+                    localStorage.setItem('accessToken', accessToken);
+                    localStorage.setItem('refreshToken', refreshToken);
+                    showMain();
+                    showMessage('Успешный вход!', 'success');
+                } else {
+                    showMessage(data.error || 'Ошибка входа', 'danger');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения', 'danger');
+            }
+        });
+
+        // Выход
+        function logout() {
+            fetch(`${API_BASE}/auth/logout/`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            }).finally(() => {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                accessToken = null;
+                refreshToken = null;
+                showLogin();
+                showMessage('Вы вышли из системы', 'info');
+            });
+        }
+
+        // Показать главный экран
+        async function showMain() {
+            document.getElementById('loginSection').classList.add('hide');
+            document.getElementById('mainSection').classList.remove('hide');
+            document.getElementById('logoutBtn').classList.remove('hide');
+            
+            await loadUserInfo();
+            await loadPermissions();
+            await loadResources();
+        }
+
+        // Показать экран входа
+        function showLogin() {
+            document.getElementById('loginSection').classList.remove('hide');
+            document.getElementById('mainSection').classList.add('hide');
+            document.getElementById('logoutBtn').classList.add('hide');
+            document.getElementById('userEmail').textContent = '';
+        }
+
+        // Загрузка информации о пользователе
+        async function loadUserInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/profile/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    document.getElementById('userEmail').textContent = user.email;
+                    
+                    const userInfo = document.getElementById('userInfo');
+                    userInfo.classList.remove('hide');
+                    document.getElementById('userDetails').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Имя:</strong> ${user.full_name}<br>
+                                <strong>Email:</strong> ${user.email}<br>
+                                <strong>Роли:</strong> ${user.roles.map(r => r.name).join(', ')}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>ID:</strong> ${user.id}<br>
+                                <strong>Активен:</strong> ${user.is_active ? 'Да' : 'Нет'}<br>
+                                <strong>Создан:</strong> ${new Date(user.created_at).toLocaleDateString('ru-RU')}
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки информации о пользователе:', error);
+            }
+        }
+
+        // Загрузка прав доступа
+        async function loadPermissions() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/permissions/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const permissionsList = document.getElementById('permissionsList');
+                    
+                    let html = '';
+                    for (const [resource, perms] of Object.entries(data.permissions)) {
+                        const activePerms = Object.entries(perms)
+                            .filter(([key, value]) => value)
+                            .map(([key]) => {
+                                const labels = {
+                                    'read': 'чтение',
+                                    'read_all': 'чтение всех',
+                                    'create': 'создание',
+                                    'update': 'обновление',
+                                    'update_all': 'обновление всех',
+                                    'delete': 'удаление',
+                                    'delete_all': 'удаление всех'
+                                };
+                                return `<span class="badge bg-success permission-badge">${labels[key] || key}</span>`;
+                            });
+                        
+                        const hasAccess = activePerms.length > 0;
+                        html += `
+                            <div class="permission-item ${hasAccess ? 'has-access' : 'no-access'}">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>${resource}</strong>
+                                    <span class="badge bg-${hasAccess ? 'success' : 'danger'}">
+                                        ${hasAccess ? '✅ Доступ разрешен' : '❌ Доступ запрещен'}
+                                    </span>
+                                </div>
+                                ${activePerms.length > 0 ? `<div class="mt-2">${activePerms.join(' ')}</div>` : ''}
+                            </div>
+                        `;
+                    }
+                    
+                    permissionsList.innerHTML = html || '<p>Нет прав доступа</p>';
+                    document.getElementById('permissionsSection').classList.remove('hide');
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки прав:', error);
+            }
+        }
+
+        // Загрузка ресурсов
+        async function loadResources() {
+            const resources = [
+                { name: 'Продукты', endpoint: 'products', icon: '📦' },
+                { name: 'Заказы', endpoint: 'orders', icon: '🛒' },
+                { name: 'Магазины', endpoint: 'shops', icon: '🏪' },
+                { name: 'Отчеты', endpoint: 'reports', icon: '📈' },
+                { name: 'Пользователи', endpoint: 'users', icon: '👥' }
+            ];
+            
+            const resourcesList = document.getElementById('resourcesList');
+            let html = '';
+            
+            for (const resource of resources) {
+                try {
+                    const response = await fetch(`${API_BASE}/business/${resource.endpoint}/`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    
+                    const statusClass = response.ok ? 'success' : 'danger';
+                    const statusText = response.ok ? 'Доступ разрешен' : 'Доступ запрещен';
+                    const statusIcon = response.ok ? '✅' : '❌';
+                    
+                    html += `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card resource-card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">${resource.icon} ${resource.name}</h5>
+                                    <p class="card-text">
+                                        <span class="badge bg-${statusClass}">${statusIcon} ${statusText}</span>
+                                    </p>
+                                    ${response.ok ? `<button class="btn btn-sm btn-outline-primary" onclick="loadResourceData('${resource.endpoint}', '${resource.name}')">Показать данные</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (error) {
+                    html += `
+                        <div class="col-md-6 col-lg-4 mb-3">
+                            <div class="card resource-card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">${resource.icon} ${resource.name}</h5>
+                                    <p class="card-text">
+                                        <span class="badge bg-warning">⚠️ Ошибка загрузки</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            resourcesList.innerHTML = html;
+            document.getElementById('resourcesSection').classList.remove('hide');
+        }
+
+        // Загрузка данных ресурса
+        async function loadResourceData(endpoint, resourceName) {
+            try {
+                const response = await fetch(`${API_BASE}/business/${endpoint}/`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResourceData(resourceName, data);
+                } else {
+                    showMessage('Ошибка загрузки данных', 'danger');
+                }
+            } catch (error) {
+                showMessage('Ошибка соединения', 'danger');
+            }
+        }
+
+        // Отображение данных ресурса в модальном окне
+        function displayResourceData(resourceName, data) {
+            const modalTitle = document.getElementById('dataModalLabel');
+            const modalContent = document.getElementById('dataModalContent');
+            
+            modalTitle.textContent = `Данные: ${resourceName}`;
+            
+            let html = '';
+            
+            if (resourceName === 'Отчеты') {
+                html = `
+                    <div class="resource-data">
+                        <p><strong>Сообщение:</strong> ${data.message}</p>
+                        <p><strong>Доступные отчеты:</strong></p>
+                        <ul>
+                            ${data.available_reports.map(report => `<li>${report}</li>`).join('')}
+                        </ul>
+                        <p><strong>Сгенерирован:</strong> ${new Date(data.generated_at).toLocaleString('ru-RU')}</p>
+                    </div>
+                `;
+            } else if (data.products) {
+                html = `
+                    <div class="resource-data">
+                        <h6>Продукты (${data.products.length}):</h6>
+                        ${data.products.map(product => `
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <h6 class="card-title">${product.name}</h6>
+                                    <p class="card-text">
+                                        <strong>Описание:</strong> ${product.description}<br>
+                                        <strong>Цена:</strong> $${product.price}<br>
+                                        <strong>ID:</strong> ${product.id}<br>
+                                        <strong>Владелец:</strong> ${product.owner_id || 'Публичный'}<br>
+                                        <strong>Создан:</strong> ${new Date(product.created_at).toLocaleString('ru-RU')}
+                                    </p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (data.orders) {
+                html = `
+                    <div class="resource-data">
+                        <h6>Заказы (${data.orders.length}):</h6>
+                        ${data.orders.map(order => `
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <h6 class="card-title">${order.product_name}</h6>
+                                    <p class="card-text">
+                                        <strong>Количество:</strong> ${order.quantity}<br>
+                                        <strong>Общая цена:</strong> $${order.total_price}<br>
+                                        <strong>Статус:</strong> ${order.status}<br>
+                                        <strong>ID:</strong> ${order.id}<br>
+                                        <strong>Владелец:</strong> ${order.owner_id || 'Публичный'}<br>
+                                        <strong>Создан:</strong> ${new Date(order.created_at).toLocaleString('ru-RU')}
+                                    </p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (data.shops) {
+                html = `
+                    <div class="resource-data">
+                        <h6>Магазины (${data.shops.length}):</h6>
+                        ${data.shops.map(shop => `
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <h6 class="card-title">${shop.name}</h6>
+                                    <p class="card-text">
+                                        <strong>Адрес:</strong> ${shop.address}<br>
+                                        <strong>Телефон:</strong> ${shop.phone}<br>
+                                        <strong>ID:</strong> ${shop.id}<br>
+                                        <strong>Владелец:</strong> ${shop.owner_id || 'Публичный'}<br>
+                                        <strong>Создан:</strong> ${new Date(shop.created_at).toLocaleString('ru-RU')}
+                                    </p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else if (data.users) {
+                html = `
+                    <div class="resource-data">
+                        <h6>Пользователи (${data.users.length}):</h6>
+                        ${data.users.map(user => `
+                            <div class="card mb-2">
+                                <div class="card-body">
+                                    <h6 class="card-title">${user.full_name}</h6>
+                                    <p class="card-text">
+                                        <strong>Email:</strong> ${user.email}<br>
+                                        <strong>ID:</strong> ${user.id}<br>
+                                        <strong>Создан:</strong> ${new Date(user.created_at).toLocaleString('ru-RU')}
+                                    </p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                html = `
+                    <div class="resource-data">
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            }
+            
+            modalContent.innerHTML = html;
+            
+            const modal = new bootstrap.Modal(document.getElementById('dataModal'));
+            modal.show();
+        }
+
+        // Показать сообщение
+        function showMessage(message, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = message;
+            messageEl.className = `alert alert-${type}`;
+            messageEl.classList.remove('hide');
+            
+            setTimeout(() => {
+                messageEl.classList.add('hide');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

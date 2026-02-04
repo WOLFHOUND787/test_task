@@ -79,6 +79,10 @@ def check_user_permission(user, resource_name, action, obj_owner_id=None):
         if action == 'create':
             return True
         
+        # Для чтения списка (read) разрешаем доступ, фильтрация будет на уровне view
+        if action == 'read':
+            return True
+        
         # Для других действий проверяем владельца
         if obj_owner_id is not None and str(obj_owner_id) == str(user.id):
             return True
@@ -124,6 +128,44 @@ class CustomObjectPermission(BasePermission):
             self.action, 
             obj_owner_id
         )
+
+
+def CustomObjectPermissionFactory(resource_name, action='read'):
+    """
+    Фабрика для создания permission классов
+    """
+    class PermissionClass(BasePermission):
+        def has_permission(self, request, view):
+            if not request.user or not request.user.is_authenticated:
+                return False
+            
+            # Для create не нужен конкретный объект
+            if action == 'create':
+                return check_user_permission(request.user, resource_name, 'create')
+            
+            return True
+        
+        def has_object_permission(self, request, view, obj):
+            if not request.user or not request.user.is_authenticated:
+                return False
+            
+            # Определяем владельца объекта
+            obj_owner_id = None
+            if hasattr(obj, 'owner'):
+                obj_owner_id = obj.owner.id if obj.owner else None
+            elif hasattr(obj, 'user'):
+                obj_owner_id = obj.user.id if obj.user else None
+            elif hasattr(obj, 'id') and resource_name == 'users':
+                obj_owner_id = obj.id
+            
+            return check_user_permission(
+                request.user, 
+                resource_name, 
+                action, 
+                obj_owner_id
+            )
+    
+    return PermissionClass
 
 
 def require_permission(resource_name, action='read'):

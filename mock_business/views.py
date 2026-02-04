@@ -2,239 +2,381 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from authentication.authorization import CustomObjectPermission
+from authentication.authorization import CustomObjectPermissionFactory
 from authentication.models import User
+from .models import Shop, Product, Order
 import uuid
 
 
-# Mock данные для демонстрации
-MOCK_PRODUCTS = [
-    {
-        'id': str(uuid.uuid4()),
-        'name': 'Laptop Dell XPS 15',
-        'description': 'Powerful laptop with 4K display',
-        'price': 1999.99,
-        'owner_id': None,  # Публичный продукт
-        'created_at': '2024-01-15T10:30:00Z'
-    },
-    {
-        'id': str(uuid.uuid4()),
-        'name': 'iPhone 15 Pro',
-        'description': 'Latest iPhone with titanium design',
-        'price': 1199.99,
-        'owner_id': None,  # Публичный продукт
-        'created_at': '2024-01-20T14:15:00Z'
-    }
-]
-
-MOCK_ORDERS = [
-    {
-        'id': str(uuid.uuid4()),
-        'product_name': 'Laptop Dell XPS 15',
-        'quantity': 1,
-        'total_price': 1999.99,
-        'status': 'completed',
-        'owner_id': None,  # Будет установлен при создании
-        'created_at': '2024-01-16T09:45:00Z'
-    }
-]
-
-MOCK_SHOPS = [
-    {
-        'id': str(uuid.uuid4()),
-        'name': 'Tech Store Downtown',
-        'address': '123 Main St, City',
-        'phone': '+1-555-0123',
-        'owner_id': None,  # Публичный магазин
-        'created_at': '2024-01-01T00:00:00Z'
-    }
-]
-
-
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def product_list_view(request):
-    """Список продуктов"""
-    from authentication.authorization import check_user_permission
-    
-    # Проверяем права на чтение продуктов
-    if not check_user_permission(request.user, 'products', 'read'):
-        return Response({'error': 'Insufficient permissions'}, status=403)
-    
-    user = request.user
-    
-    # Фильтруем продукты в зависимости от прав
-    products = []
-    for product in MOCK_PRODUCTS:
-        if product['owner_id'] is None:
-            # Публичные продукты доступны всем
-            products.append(product)
-        elif str(product['owner_id']) == str(user.id):
-            # Продукты пользователя доступны ему
-            products.append(product)
-        else:
-            # Проверяем права на чтение всех продуктов
-            if check_user_permission(user, 'products', 'read_all'):
-                products.append(product)
-    
-    return Response({'products': products})
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def product_create_view(request):
-    """Создание продукта"""
-    from authentication.authorization import check_user_permission
-    
-    # Проверяем права на создание продуктов
-    if not check_user_permission(request.user, 'products', 'create'):
-        return Response({'error': 'Insufficient permissions'}, status=403)
-    
-    product_data = request.data
-    new_product = {
-        'id': str(uuid.uuid4()),
-        'name': product_data.get('name', 'New Product'),
-        'description': product_data.get('description', ''),
-        'price': product_data.get('price', 0.0),
-        'owner_id': str(request.user.id),  # Владелец - текущий пользователь
-        'created_at': '2024-01-25T12:00:00Z'
-    }
-    
-    MOCK_PRODUCTS.append(new_product)
-    return Response(new_product, status=status.HTTP_201_CREATED)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def order_list_view(request):
-    """Список заказов"""
-    from authentication.authorization import check_user_permission
-    
-    # Проверяем права на чтение заказов
-    if not check_user_permission(request.user, 'orders', 'read'):
-        return Response({'error': 'Insufficient permissions'}, status=403)
-    
-    user = request.user
-    
-    orders = []
-    for order in MOCK_ORDERS:
-        if order['owner_id'] is None:
-            orders.append(order)
-        elif str(order['owner_id']) == str(user.id):
-            orders.append(order)
-        else:
-            from authentication.authorization import check_user_permission
-            if check_user_permission(user, 'orders', 'read_all'):
-                orders.append(order)
-    
-    return Response({'orders': orders})
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def order_create_view(request):
-    """Создание заказа"""
-    from authentication.authorization import check_user_permission
-    
-    # Проверяем права на создание заказов
-    if not check_user_permission(request.user, 'orders', 'create'):
-        return Response({'error': 'Insufficient permissions'}, status=403)
-    
-    order_data = request.data
-    new_order = {
-        'id': str(uuid.uuid4()),
-        'product_name': order_data.get('product_name', 'Unknown Product'),
-        'quantity': order_data.get('quantity', 1),
-        'total_price': order_data.get('total_price', 0.0),
-        'status': 'pending',
-        'owner_id': str(request.user.id),
-        'created_at': '2024-01-25T12:00:00Z'
-    }
-    
-    MOCK_ORDERS.append(new_order)
-    return Response(new_order, status=status.HTTP_201_CREATED)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([CustomObjectPermissionFactory('shops', 'read')])
 def shop_list_view(request):
-    """Список магазинов"""
-    from authentication.authorization import check_user_permission
+    """Получение списка всех магазинов"""
+    shops = Shop.objects.filter(is_active=True)
+    shop_data = []
     
-    # Проверяем права на чтение магазинов
-    if not check_user_permission(request.user, 'shops', 'read'):
-        return Response({'error': 'Insufficient permissions'}, status=403)
+    for shop in shops:
+        shop_data.append({
+            'id': str(shop.id),
+            'name': shop.name,
+            'address': shop.address,
+            'phone': shop.phone,
+            'owner_id': str(shop.owner.id) if shop.owner else None,
+            'created_at': shop.created_at.isoformat()
+        })
     
-    user = request.user
+    return Response({'shops': shop_data})
+
+
+@api_view(['GET'])
+@permission_classes([CustomObjectPermissionFactory('shops', 'read')])
+def shop_products_view(request, shop_id):
+    """Получение продуктов конкретного магазина"""
+    try:
+        shop = Shop.objects.get(id=shop_id, is_active=True)
+        products = Product.objects.filter(shop=shop, is_active=True)
+        
+        product_data = []
+        for product in products:
+            product_data.append({
+                'id': str(product.id),
+                'name': product.name,
+                'description': product.description,
+                'price': float(product.price),
+                'shop_id': str(product.shop.id),
+                'owner_id': str(product.owner.id) if product.owner else None,
+                'created_at': product.created_at.isoformat()
+            })
+        
+        return Response({'products': product_data})
+    except Shop.DoesNotExist:
+        return Response({'error': 'Shop not found'}, status=404)
+
+
+@api_view(['GET'])
+@permission_classes([CustomObjectPermissionFactory('products', 'read')])
+def product_list_view(request):
+    """Получение списка всех продуктов"""
+    products = Product.objects.filter(is_active=True)
+    product_data = []
     
-    shops = []
-    for shop in MOCK_SHOPS:
-        if shop['owner_id'] is None:
-            shops.append(shop)
-        elif str(shop['owner_id']) == str(user.id):
-            shops.append(shop)
-        else:
-            from authentication.authorization import check_user_permission
-            if check_user_permission(user, 'shops', 'read_all'):
-                shops.append(shop)
+    for product in products:
+        product_data.append({
+            'id': str(product.id),
+            'name': product.name,
+            'description': product.description,
+            'price': float(product.price),
+            'shop_id': str(product.shop.id),
+            'owner_id': str(product.owner.id) if product.owner else None,
+            'created_at': product.created_at.isoformat()
+        })
     
-    return Response({'shops': shops})
+    return Response({'products': product_data})
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def shop_create_view(request):
-    """Создание магазина"""
-    from authentication.authorization import check_user_permission
+@permission_classes([CustomObjectPermissionFactory('products', 'create')])
+def product_create_view(request):
+    """Создание нового продукта"""
+    user = request.user
     
-    # Проверяем права на создание магазинов
-    if not check_user_permission(request.user, 'shops', 'create'):
-        return Response({'error': 'Insufficient permissions'}, status=403)
+    # Проверяем что у менеджера есть магазины
+    shops = Shop.objects.filter(owner=user, is_active=True)
+    if not shops.exists():
+        return Response({'error': 'Manager must have a shop to create products'}, status=400)
     
-    shop_data = request.data
-    new_shop = {
-        'id': str(uuid.uuid4()),
-        'name': shop_data.get('name', 'New Shop'),
-        'address': shop_data.get('address', ''),
-        'phone': shop_data.get('phone', ''),
-        'owner_id': str(request.user.id),
-        'created_at': '2024-01-25T12:00:00Z'
-    }
+    data = request.data
+    if not data.get('name') or not data.get('price'):
+        return Response({'error': 'Name and price are required'}, status=400)
     
-    MOCK_SHOPS.append(new_shop)
-    return Response(new_shop, status=status.HTTP_201_CREATED)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_list_view(request):
-    """Список пользователей (только для демонстрации)"""
-    from authentication.authorization import check_user_permission
+    # Если у менеджера несколько магазинов, нужно указать shop_id
+    shop_id = data.get('shop_id')
+    if shops.count() > 1:
+        if not shop_id:
+            return Response({'error': 'Shop ID is required when manager has multiple shops'}, status=400)
+        try:
+            shop = shops.get(id=shop_id)
+        except Shop.DoesNotExist:
+            return Response({'error': 'Invalid shop ID'}, status=400)
+    else:
+        # Если один магазин, берем его
+        shop = shops.first()
     
-    # Проверяем права на чтение пользователей
-    if not check_user_permission(request.user, 'users', 'read'):
-        return Response({'error': 'Insufficient permissions'}, status=403)
-    
-    users = User.objects.filter(is_active=True).values('id', 'email', 'first_name', 'last_name', 'created_at')
-    return Response({'users': list(users)})
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def reports_view(request):
-    """Отчеты (демонстрация сложного ресурса)"""
-    from authentication.authorization import check_user_permission
-    
-    # Проверяем права на чтение отчетов
-    if not check_user_permission(request.user, 'reports', 'read'):
-        return Response({'error': 'Insufficient permissions'}, status=403)
+    product = Product.objects.create(
+        name=data['name'],
+        description=data.get('description', ''),
+        price=data['price'],
+        shop=shop,
+        owner=user
+    )
     
     return Response({
-        'message': 'Access granted to reports',
-        'available_reports': [
-            'sales_report',
-            'user_activity_report',
-            'inventory_report'
-        ],
-        'generated_at': '2024-01-25T12:00:00Z'
+        'id': str(product.id),
+        'name': product.name,
+        'description': product.description,
+        'price': float(product.price),
+        'shop_id': str(product.shop.id),
+        'owner_id': str(product.owner.id),
+        'created_at': product.created_at.isoformat()
+    }, status=201)
+
+
+@api_view(['GET'])
+@permission_classes([CustomObjectPermissionFactory('orders', 'read')])
+def order_list_view(request):
+    """Получение списка заказов"""
+    user = request.user
+    
+    if user.is_superuser:
+        orders = Order.objects.all()
+    elif user.user_roles.filter(role__name='manager').exists():
+        # Менеджеры видят заказы на свои продукты
+        user_shops = Shop.objects.filter(owner=user)
+        orders = Order.objects.filter(product__shop__in=user_shops)
+    else:
+        # Пользователи видят только свои заказы
+        orders = Order.objects.filter(customer=user)
+    
+    order_data = []
+    for order in orders:
+        order_data.append({
+            'id': str(order.id),
+            'product_name': order.product.name,
+            'quantity': order.quantity,
+            'total_price': float(order.total_price),
+            'status': order.status,
+            'customer_id': str(order.customer.id) if order.customer else None,
+            'created_at': order.created_at.isoformat()
+        })
+    
+    return Response({'orders': order_data})
+
+
+@api_view(['POST'])
+@permission_classes([CustomObjectPermissionFactory('orders', 'create')])
+def order_create_view(request):
+    """Создание нового заказа"""
+    user = request.user
+    
+    # Проверяем что менеджеры не могут создавать заказы
+    if user.user_roles.filter(role__name='manager').exists():
+        return Response({'error': 'Managers cannot create orders'}, status=403)
+    
+    data = request.data
+    if not data.get('product_id') or not data.get('quantity'):
+        return Response({'error': 'Product ID and quantity are required'}, status=400)
+    
+    try:
+        product = Product.objects.get(id=data['product_id'], is_active=True)
+    except Product.DoesNotExist:
+        return Response({'error': 'Product not found'}, status=404)
+    
+    order = Order.objects.create(
+        product=product,
+        quantity=data['quantity'],
+        customer=user
+    )
+    
+    return Response({
+        'id': str(order.id),
+        'product_name': order.product.name,
+        'quantity': order.quantity,
+        'total_price': float(order.total_price),
+        'status': order.status,
+        'customer_id': str(order.customer.id),
+        'created_at': order.created_at.isoformat()
+    }, status=201)
+
+
+@api_view(['POST'])
+@permission_classes([CustomObjectPermissionFactory('shops', 'create')])
+def shop_create_view(request):
+    """Создание нового магазина"""
+    user = request.user
+    
+    # Проверяем что только менеджеры могут создавать магазины
+    if not user.user_roles.filter(role__name='manager').exists():
+        return Response({'error': 'Only managers can create shops'}, status=403)
+    
+    data = request.data
+    if not data.get('name') or not data.get('address') or not data.get('phone'):
+        return Response({'error': 'Name, address and phone are required'}, status=400)
+    
+    shop = Shop.objects.create(
+        name=data['name'],
+        address=data['address'],
+        phone=data['phone'],
+        owner=user
+    )
+    
+    return Response({
+        'id': str(shop.id),
+        'name': shop.name,
+        'address': shop.address,
+        'phone': shop.phone,
+        'owner_id': str(shop.owner.id),
+        'created_at': shop.created_at.isoformat()
+    }, status=201)
+
+
+@api_view(['GET'])
+@permission_classes([CustomObjectPermissionFactory('users', 'read')])
+def user_list_view(request):
+    """Получение списка пользователей"""
+    users = User.objects.all()
+    user_data = []
+    
+    for user in users:
+        roles = [ur.role.name for ur in user.user_roles.all()]
+        user_data.append({
+            'id': str(user.id),
+            'email': user.email,
+            'full_name': user.full_name,
+            'roles': roles,
+            'is_active': user.is_active,
+            'created_at': user.created_at.isoformat()
+        })
+    
+    return Response({'users': user_data})
+
+
+@api_view(['GET', 'PUT'])
+@permission_classes([CustomObjectPermissionFactory('profiles', 'read')])
+def profile_view(request):
+    """Просмотр и обновление профиля"""
+    user = request.user
+    
+    if request.method == 'GET':
+        roles = [ur.role.name for ur in user.user_roles.all()]
+        return Response({
+            'id': str(user.id),
+            'email': user.email,
+            'full_name': user.full_name,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'patronymic': user.patronymic,
+            'roles': roles,
+            'is_active': user.is_active,
+            'created_at': user.created_at.isoformat()
+        })
+    
+    elif request.method == 'PUT':
+        data = request.data
+        # Обновляем только first_name и last_name, email не меняем
+        if 'full_name' in data:
+            full_name = data['full_name']
+            # Разделяем полное имя на части
+            name_parts = full_name.split(' ', 2)
+            user.first_name = name_parts[1] if len(name_parts) > 1 else ''
+            user.last_name = name_parts[0] if len(name_parts) > 0 else ''
+            user.patronymic = name_parts[2] if len(name_parts) > 2 else ''
+        
+        user.save()
+        
+        roles = [ur.role.name for ur in user.user_roles.all()]
+        return Response({
+            'id': str(user.id),
+            'email': user.email,
+            'full_name': user.full_name,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'patronymic': user.patronymic,
+            'roles': roles,
+            'is_active': user.is_active,
+            'created_at': user.created_at.isoformat()
+        })
+
+
+@api_view(['PUT'])
+@permission_classes([CustomObjectPermissionFactory('orders', 'update')])
+def order_complete_view(request, order_id):
+    """Выполнить заказ"""
+    user = request.user
+    
+    try:
+        order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({'error': 'Order not found'}, status=404)
+    
+    # Проверяем что менеджер может выполнять заказы на свои продукты
+    if not user.is_superuser:
+        user_shops = Shop.objects.filter(owner=user)
+        if not Order.objects.filter(id=order_id, product__shop__in=user_shops).exists():
+            return Response({'error': 'Insufficient permissions'}, status=403)
+    
+    if order.status != 'pending':
+        return Response({'error': 'Order cannot be completed'}, status=400)
+    
+    order.status = 'completed'
+    order.save()
+    
+    return Response({
+        'id': str(order.id),
+        'product_name': order.product.name,
+        'quantity': order.quantity,
+        'total_price': float(order.total_price),
+        'status': order.status,
+        'customer_id': str(order.customer.id),
+        'created_at': order.created_at.isoformat()
     })
+
+
+@api_view(['PUT'])
+@permission_classes([CustomObjectPermissionFactory('orders', 'update')])
+def order_cancel_view(request, order_id):
+    """Отменить заказ"""
+    user = request.user
+    
+    try:
+        order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({'error': 'Order not found'}, status=404)
+    
+    # Проверяем права: только владелец заказа или менеджер продукта могут отменить
+    if not user.is_superuser:
+        # Владелец заказа может отменить
+        if order.customer != user:
+            # Менеджер может отменить заказы на свои продукты
+            user_shops = Shop.objects.filter(owner=user)
+            if not Order.objects.filter(id=order_id, product__shop__in=user_shops).exists():
+                return Response({'error': 'Insufficient permissions'}, status=403)
+    
+    if order.status != 'pending':
+        return Response({'error': 'Order cannot be cancelled'}, status=400)
+    
+    order.status = 'cancelled'
+    order.save()
+    
+    return Response({
+        'id': str(order.id),
+        'product_name': order.product.name,
+        'quantity': order.quantity,
+        'total_price': float(order.total_price),
+        'status': order.status,
+        'customer_id': str(order.customer.id),
+        'created_at': order.created_at.isoformat()
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([CustomObjectPermissionFactory('orders', 'delete')])
+def order_delete_view(request, order_id):
+    """Удалить заказ (только отмененные заказы и только для владельцев)"""
+    user = request.user
+    
+    try:
+        order = Order.objects.get(id=order_id)
+    except Order.DoesNotExist:
+        return Response({'error': 'Order not found'}, status=404)
+    
+    # Проверяем что это владелец заказа
+    if order.customer != user and not user.is_superuser:
+        return Response({'error': 'Insufficient permissions'}, status=403)
+    
+    # Проверяем что заказ отменен
+    if order.status != 'cancelled':
+        return Response({'error': 'Only cancelled orders can be deleted'}, status=400)
+    
+    order.delete()
+    
+    return Response({'message': 'Order deleted successfully'})

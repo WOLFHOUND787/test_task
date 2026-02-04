@@ -4,20 +4,35 @@ from datetime import datetime, timedelta
 import uuid
 
 
-def generate_jwt_token(user_id):
+def generate_jwt_tokens(user_id):
     """
-    Генерирует JWT токен для пользователя
+    Генерирует access и refresh JWT токены для пользователя
     """
-    jti = str(uuid.uuid4())
-    payload = {
+    access_jti = str(uuid.uuid4())
+    refresh_jti = str(uuid.uuid4())
+    
+    # Access токен - короткоживущий (15 минут)
+    access_payload = {
         'user_id': str(user_id),
-        'jti': jti,
-        'exp': datetime.utcnow() + timedelta(seconds=settings.JWT_ACCESS_TOKEN_LIFETIME),
+        'jti': access_jti,
+        'type': 'access',
+        'exp': datetime.utcnow() + timedelta(minutes=15),
         'iat': datetime.utcnow(),
     }
     
-    token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
-    return token, jti
+    # Refresh токен - долгоживущий (7 дней)
+    refresh_payload = {
+        'user_id': str(user_id),
+        'jti': refresh_jti,
+        'type': 'refresh',
+        'exp': datetime.utcnow() + timedelta(days=7),
+        'iat': datetime.utcnow(),
+    }
+    
+    access_token = jwt.encode(access_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    refresh_token = jwt.encode(refresh_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    
+    return access_token, refresh_token, access_jti, refresh_jti
 
 
 def verify_jwt_token(token):
@@ -31,3 +46,13 @@ def verify_jwt_token(token):
         return None
     except jwt.InvalidTokenError:
         return None
+
+
+def verify_refresh_token(token):
+    """
+    Проверяет refresh токен и возвращает payload
+    """
+    payload = verify_jwt_token(token)
+    if payload and payload.get('type') == 'refresh':
+        return payload
+    return None

@@ -4,6 +4,11 @@ from . import views
 app_name = 'mock_business'
 
 urlpatterns = [
+    # Магазины
+    path('shops/', views.shop_list_view, name='shop_list'),
+    path('shops/create/', views.shop_create_view, name='shop_create'),
+    path('shops/<uuid:shop_id>/products/', views.shop_products_view, name='shop_products'),
+    
     # Продукты
     path('products/', views.product_list_view, name='product_list'),
     path('products/create/', views.product_create_view, name='product_create'),
@@ -11,14 +16,13 @@ urlpatterns = [
     # Заказы
     path('orders/', views.order_list_view, name='order_list'),
     path('orders/create/', views.order_create_view, name='order_create'),
+    path('orders/<uuid:order_id>/complete/', views.order_complete_view, name='order_complete'),
+    path('orders/<uuid:order_id>/cancel/', views.order_cancel_view, name='order_cancel'),
+    path('orders/<uuid:order_id>/delete/', views.order_delete_view, name='order_delete'),
     
-    # Магазины
-    path('shops/', views.shop_list_view, name='shop_list'),
-    path('shops/create/', views.shop_create_view, name='shop_create'),
-    
-    # Пользователи
+    # Пользователи (только для админа)
     path('users/', views.user_list_view, name='user_list'),
     
-    # Отчеты
-    path('reports/', views.reports_view, name='reports'),
+    # Профиль пользователя
+    path('profile/', views.profile_view, name='profile'),
 ]

@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.utils import timezone
+from datetime import timedelta
 import bcrypt
 import uuid
 
@@ -37,16 +39,16 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    patronymic = models.CharField(max_length=100, blank=True, null=True)
+    email = models.EmailField(unique=True, verbose_name='Email')
+    first_name = models.CharField(max_length=50, verbose_name='Имя')
+    last_name = models.CharField(max_length=50, verbose_name='Фамилия')
+    patronymic = models.CharField(max_length=50, blank=True, null=True, verbose_name='Отчество')
     password_hash = models.CharField(max_length=255)
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-    is_superuser = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, verbose_name='Активен')
+    is_staff = models.BooleanField(default=False, verbose_name='Персонал')
+    is_superuser = models.BooleanField(default=False, verbose_name='Суперпользователь')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлен')
 
     objects = UserManager()
 
@@ -55,6 +57,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = 'users'
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
 
     def set_password(self, raw_password):
         salt = bcrypt.gensalt()
@@ -73,24 +77,30 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Session(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sessions')
-    token_jti = models.CharField(max_length=255, unique=True)
-    expires_at = models.DateTimeField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    is_active = models.BooleanField(default=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sessions', verbose_name='Пользователь')
+    access_jti = models.CharField(max_length=255, unique=True, verbose_name='Access JTI')
+    refresh_jti = models.CharField(max_length=255, unique=True, verbose_name='Refresh JTI')
+    access_expires_at = models.DateTimeField(verbose_name='Истекает access токен')
+    refresh_expires_at = models.DateTimeField(default=timezone.now() + timedelta(days=7), verbose_name='Истекает refresh токен')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
+    is_active = models.BooleanField(default=True, verbose_name='Активна')
 
     class Meta:
         db_table = 'sessions'
+        verbose_name = 'Сессия'
+        verbose_name_plural = 'Сессии'
 
 
 class Role(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
+    name = models.CharField(max_length=100, unique=True, verbose_name='Название')
+    description = models.TextField(blank=True, null=True, verbose_name='Описание')
+    is_active = models.BooleanField(default=True, verbose_name='Активна')
 
     class Meta:
         db_table = 'roles'
+        verbose_name = 'Роль'
+        verbose_name_plural = 'Роли'
 
     def __str__(self):
         return self.name
@@ -98,25 +108,29 @@ class Role(models.Model):
 
 class UserRole(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles')
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_users')
-    assigned_at = models.DateTimeField(auto_now_add=True)
-    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_roles')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles', verbose_name='Пользователь')
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_users', verbose_name='Роль')
+    assigned_at = models.DateTimeField(auto_now_add=True, verbose_name='Назначена')
+    assigned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_roles', verbose_name='Кем назначена')
 
     class Meta:
         db_table = 'user_roles'
         unique_together = ['user', 'role']
+        verbose_name = 'Роль пользователя'
+        verbose_name_plural = 'Роли пользователей'
 
 
 class BusinessElement(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
-    has_owner_field = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
+    name = models.CharField(max_length=100, unique=True, verbose_name='Название')
+    description = models.TextField(blank=True, null=True, verbose_name='Описание')
+    has_owner_field = models.BooleanField(default=False, verbose_name='Есть поле владельца')
+    is_active = models.BooleanField(default=True, verbose_name='Активен')
 
     class Meta:
         db_table = 'business_elements'
+        verbose_name = 'Бизнес-элемент'
+        verbose_name_plural = 'Бизнес-элементы'
 
     def __str__(self):
         return self.name
@@ -124,18 +138,20 @@ class BusinessElement(models.Model):
 
 class AccessRoleRule(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='access_rules')
-    element = models.ForeignKey(BusinessElement, on_delete=models.CASCADE, related_name='access_rules')
-    read_permission = models.BooleanField(default=False)
-    read_all_permission = models.BooleanField(default=False)
-    create_permission = models.BooleanField(default=False)
-    update_permission = models.BooleanField(default=False)
-    update_all_permission = models.BooleanField(default=False)
-    delete_permission = models.BooleanField(default=False)
-    delete_all_permission = models.BooleanField(default=False)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='access_rules', verbose_name='Роль')
+    element = models.ForeignKey(BusinessElement, on_delete=models.CASCADE, related_name='access_rules', verbose_name='Элемент')
+    read_permission = models.BooleanField(default=False, verbose_name='Чтение')
+    read_all_permission = models.BooleanField(default=False, verbose_name='Чтение всех')
+    create_permission = models.BooleanField(default=False, verbose_name='Создание')
+    update_permission = models.BooleanField(default=False, verbose_name='Обновление')
+    update_all_permission = models.BooleanField(default=False, verbose_name='Обновление всех')
+    delete_permission = models.BooleanField(default=False, verbose_name='Удаление')
+    delete_all_permission = models.BooleanField(default=False, verbose_name='Удаление всех')
 
     class Meta:
         db_table = 'access_roles_rules'
+        verbose_name = 'Правило доступа'
+        verbose_name_plural = 'Правила доступа'
         unique_together = ['role', 'element']
 
     def __str__(self):
