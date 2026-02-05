@@ -39,7 +39,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 from authentication.models import BusinessElement, AccessRoleRule
                 
                 # Создаем базовые элементы если их нет
-                basic_elements = ['shops', 'products', 'orders']
+                basic_elements = ['shops', 'products', 'orders', 'users']
                 for element_name in basic_elements:
                     BusinessElement.objects.get_or_create(
                         name=element_name,
@@ -63,6 +63,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                         ('shops', True, True, True, True, True),  # все права
                         ('products', True, True, True, True, True),  # все права
                         ('orders', True, True, True, True, True),  # все права
+                    ]
+                elif role_name == 'admin':
+                    # Даем полные права админа + управление пользователями
+                    elements_data = [
+                        ('shops', True, True, True, True, True),  # все права
+                        ('products', True, True, True, True, True),  # все права
+                        ('orders', True, True, True, True, True),  # все права
+                        ('users', True, True, True, True, True),  # все права
                     ]
                 else:
                     elements_data = []

@@ -365,7 +365,7 @@
             
             // Все видят магазины, менеджеры дополнительно видят управление
             document.getElementById('shopsBtn').style.display = 'block';
-            document.getElementById('ordersBtn').style.display = isManager ? 'none' : 'block';
+            document.getElementById('ordersBtn').style.display = (isManager || isAdmin) ? 'none' : 'block';
             document.getElementById('manageShopBtn').style.display = isManager ? 'block' : 'none';
             document.getElementById('usersBtn').style.display = isAdmin ? 'block' : 'none';
             
@@ -521,9 +521,10 @@
                     productsList.innerHTML = '';
                     
                     data.products.forEach(product => {
-                        // Менеджеры не могут заказывать продукты вообще
+                        // Менеджеры и админы не могут заказывать продукты вообще
                         const isManager = currentUser.roles && (typeof currentUser.roles[0] === 'string' ? currentUser.roles.includes('manager') : currentUser.roles.some(role => role.name === 'manager'));
-                        const orderButton = isManager ? '' : `<button class="btn btn-success" onclick="showOrderModal('${product.id}', '${product.name}', ${product.price})">🛒 Заказать</button>`;
+                        const isAdmin = currentUser.roles && (typeof currentUser.roles[0] === 'string' ? currentUser.roles.includes('admin') : currentUser.roles.some(role => role.name === 'admin'));
+                        const orderButton = (isManager || isAdmin) ? '' : `<button class="btn btn-success" onclick="showOrderModal('${product.id}', '${product.name}', ${product.price})">🛒 Заказать</button>`;
                         
                         const productCard = `
                             <div class="col-md-4 mb-3">
@@ -1029,6 +1030,11 @@
                                         🎭 Роль: ${typeof user.roles[0] === 'string' ? user.roles.join(', ') : user.roles.map(r => r.name).join(', ')}<br>
                                         📅 Создан: ${new Date(user.created_at).toLocaleDateString()}
                                     </p>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editUser('${user.id}', '${user.email}', '${user.full_name || ''}')">✏️ Изменить</button>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="banUser('${user.id}', '${user.email}')">🚫 Забанить</button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${user.id}', '${user.email}')">🗑️ Удалить</button>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -1275,6 +1281,65 @@
             document.getElementById('ordersSection').classList.add('hide');
             document.getElementById('manageShopSection').classList.add('hide');
             document.getElementById('usersSection').classList.add('hide');
+        }
+
+        // Управление пользователями (для админа)
+        function editUser(userId, email, fullName) {
+            const newFullName = prompt('Введите новое полное имя:', fullName);
+            if (newFullName && newFullName !== fullName) {
+                updateUser(userId, { full_name: newFullName });
+            }
+        }
+
+        function banUser(userId, email) {
+            const days = prompt('Забанить на сколько дней?', '7');
+            if (days && !isNaN(days)) {
+                const banUntil = new Date();
+                banUntil.setDate(banUntil.getDate() + parseInt(days));
+                updateUser(userId, { is_active: false, ban_until: banUntil.toISOString() });
+            }
+        }
+
+        function deleteUser(userId, email) {
+            if (confirm(`Вы уверены, что хотите удалить пользователя ${email}?`)) {
+                fetch(`${API_BASE}/business/users/${userId}/delete/`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Пользователь успешно удален!');
+                        showUsers(); // Обновляем список
+                    } else {
+                        alert('Ошибка удаления пользователя');
+                    }
+                })
+                .catch(error => {
+                    alert('Ошибка сети');
+                });
+            }
+        }
+
+        function updateUser(userId, data) {
+            fetch(`${API_BASE}/business/users/${userId}/update/`, {
+                method: 'PUT',
+                headers: { 
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Пользователь успешно обновлен!');
+                    showUsers(); // Обновляем список
+                } else {
+                    alert('Ошибка обновления пользователя');
+                }
+            })
+            .catch(error => {
+                alert('Ошибка сети');
+            });
         }
     </script>
 </body>

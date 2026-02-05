@@ -23,6 +23,8 @@ urlpatterns = [
     
     # Пользователи (только для админа)
     path('users/', views.user_list_view, name='user_list'),
+    path('users/<uuid:user_id>/update/', views.user_update_view, name='user_update'),
+    path('users/<uuid:user_id>/delete/', views.user_delete_view, name='user_delete'),
     
     # Профиль пользователя
     path('profile/', views.profile_view, name='profile'),

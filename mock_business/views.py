@@ -390,7 +390,7 @@ def order_delete_view(request, order_id):
     except Order.DoesNotExist:
         return Response({'error': 'Order not found'}, status=404)
     
-    # Проверяем что это владелец заказа
+    # Проверяем что это владелец заказа или суперпользователь
     if order.customer != user and not user.is_superuser:
         return Response({'error': 'Insufficient permissions'}, status=403)
     
@@ -401,3 +401,78 @@ def order_delete_view(request, order_id):
     order.delete()
     
     return Response({'message': 'Order deleted successfully'})
+
+
+@api_view(['PUT'])
+@permission_classes([CustomObjectPermissionFactory('users', 'update')])
+def user_update_view(request, user_id):
+    """Обновить пользователя (только для админа)"""
+    user = request.user
+    
+    if not user.is_superuser:
+        return Response({'error': 'Insufficient permissions'}, status=403)
+    
+    try:
+        target_user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+    
+    # Нельзя изменять суперпользователя
+    if target_user.is_superuser:
+        return Response({'error': 'Cannot modify superuser'}, status=403)
+    
+    data = request.data
+    
+    # Обновляем поля
+    if 'full_name' in data:
+        # full_name это property, его нужно вычислять из first_name и last_name
+        names = data['full_name'].split()
+        target_user.first_name = names[0] if names else ''
+        target_user.last_name = ' '.join(names[1:]) if len(names) > 1 else ''
+    
+    if 'is_active' in data:
+        target_user.is_active = data['is_active']
+    
+    if 'ban_until' in data:
+        # Здесь можно добавить логику бана в модели User
+        pass
+    
+    target_user.save()
+    
+    return Response({
+        'message': 'User updated successfully',
+        'user': {
+            'id': str(target_user.id),
+            'email': target_user.email,
+            'full_name': target_user.full_name,
+            'is_active': target_user.is_active,
+            'roles': [ur.role.name for ur in target_user.user_roles.all()]
+        }
+    })
+
+
+@api_view(['DELETE'])
+@permission_classes([CustomObjectPermissionFactory('users', 'delete')])
+def user_delete_view(request, user_id):
+    """Удалить пользователя (только для админа)"""
+    user = request.user
+    
+    if not user.is_superuser:
+        return Response({'error': 'Insufficient permissions'}, status=403)
+    
+    try:
+        target_user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+    
+    # Нельзя удалять суперпользователя
+    if target_user.is_superuser:
+        return Response({'error': 'Cannot delete superuser'}, status=403)
+    
+    # Нельзя удалять самого себя
+    if target_user == user:
+        return Response({'error': 'Cannot delete yourself'}, status=403)
+    
+    target_user.delete()
+    
+    return Response({'message': 'User deleted successfully'})
