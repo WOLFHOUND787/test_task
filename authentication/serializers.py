@@ -132,7 +132,7 @@ class UserLoginSerializer(serializers.Serializer):
             
             # Проверяем пароль
             if not user.check_password(password):
-                raise serializers.ValidationError("Invalid credentials")
+                raise serializers.ValidationError("Неверный логин или пароль")
             
             # Проверяем не забанен ли пользователь
             if user.is_banned:
@@ -145,7 +145,7 @@ class UserLoginSerializer(serializers.Serializer):
             
             attrs['user'] = user
         except User.DoesNotExist:
-            raise serializers.ValidationError("Invalid credentials")
+            raise serializers.ValidationError("Неверный логин или пароль")
         
         return attrs
 
