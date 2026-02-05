@@ -87,6 +87,15 @@ def login_view(request):
     
     user = serializer.validated_data['user']
     
+    # Проверяем не забанен ли пользователь
+    if user.is_banned:
+        ban_message = "Ваш аккаунт забанен"
+        if user.ban_until:
+            ban_message += f" до {user.ban_until.strftime('%d.%m.%Y %H:%M')}"
+        else:
+            ban_message += " навсегда"
+        return Response({'error': ban_message}, status=403)
+    
     # Генерируем access и refresh токены
     access_token, refresh_token, access_jti, refresh_jti = generate_jwt_tokens(user.id)
     

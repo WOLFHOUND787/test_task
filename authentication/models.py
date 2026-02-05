@@ -47,6 +47,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True, verbose_name='Активен')
     is_staff = models.BooleanField(default=False, verbose_name='Персонал')
     is_superuser = models.BooleanField(default=False, verbose_name='Суперпользователь')
+    ban_until = models.DateTimeField(null=True, blank=True, verbose_name='Забанен до')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлен')
 
@@ -73,6 +74,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         if self.patronymic:
             parts.append(self.patronymic)
         return ' '.join(parts)
+    
+    @property
+    def is_banned(self):
+        """Проверяет забанен ли пользователь"""
+        if not self.is_active:
+            return True
+        if self.ban_until and self.ban_until > timezone.now():
+            return True
+        return False
 
 
 class Session(models.Model):

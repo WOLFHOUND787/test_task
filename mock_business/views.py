@@ -258,6 +258,7 @@ def user_list_view(request):
             'full_name': user.full_name,
             'roles': roles,
             'is_active': user.is_active,
+            'ban_until': user.ban_until.isoformat() if user.ban_until else None,
             'created_at': user.created_at.isoformat()
         })
     
@@ -434,8 +435,16 @@ def user_update_view(request, user_id):
         target_user.is_active = data['is_active']
     
     if 'ban_until' in data:
-        # Здесь можно добавить логику бана в модели User
-        pass
+        if data['ban_until'] is None:
+            # Разбанить
+            target_user.ban_until = None
+            target_user.is_active = True
+        else:
+            # Забанить - парсим ISO строку в datetime
+            from datetime import datetime
+            ban_until = datetime.fromisoformat(data['ban_until'].replace('Z', '+00:00'))
+            target_user.ban_until = ban_until
+            target_user.is_active = False
     
     target_user.save()
     
@@ -446,6 +455,7 @@ def user_update_view(request, user_id):
             'email': target_user.email,
             'full_name': target_user.full_name,
             'is_active': target_user.is_active,
+            'ban_until': target_user.ban_until.isoformat() if target_user.ban_until and hasattr(target_user.ban_until, 'isoformat') else target_user.ban_until,
             'roles': [ur.role.name for ur in target_user.user_roles.all()]
         }
     })

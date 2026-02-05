@@ -1021,18 +1021,23 @@
                     usersList.innerHTML = '';
                     
                     data.users.forEach(user => {
+                        const isBanned = !user.is_active;
+                        const banStatus = isBanned ? '🚫 Забанен' : '✅ Активен';
+                        const banInfo = isBanned && user.ban_until ? ` (до ${new Date(user.ban_until).toLocaleDateString()})` : '';
+                        
                         const userItem = `
-                            <div class="card mb-3">
+                            <div class="card mb-3 ${isBanned ? 'border-warning' : ''}">
                                 <div class="card-body">
                                     <h6>${user.full_name || user.email}</h6>
                                     <p class="mb-1">
                                         📧 ${user.email}<br>
                                         🎭 Роль: ${typeof user.roles[0] === 'string' ? user.roles.join(', ') : user.roles.map(r => r.name).join(', ')}<br>
-                                        📅 Создан: ${new Date(user.created_at).toLocaleDateString()}
+                                        📅 Создан: ${new Date(user.created_at).toLocaleDateString()}<br>
+                                        🚫 Статус: ${banStatus}${banInfo}
                                     </p>
                                     <div class="btn-group" role="group">
                                         <button class="btn btn-sm btn-outline-primary" onclick="editUser('${user.id}', '${user.email}', '${user.full_name || ''}')">✏️ Изменить</button>
-                                        <button class="btn btn-sm btn-outline-warning" onclick="banUser('${user.id}', '${user.email}')">🚫 Забанить</button>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="banUser('${user.id}', '${user.email}', ${isBanned})" title="${isBanned ? 'Разбанить' : 'Забанить'}">${isBanned ? '🔓 Разбанить' : '🚫 Забанить'}</button>
                                         <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${user.id}', '${user.email}')">🗑️ Удалить</button>
                                     </div>
                                 </div>
@@ -1291,12 +1296,20 @@
             }
         }
 
-        function banUser(userId, email) {
-            const days = prompt('Забанить на сколько дней?', '7');
-            if (days && !isNaN(days)) {
-                const banUntil = new Date();
-                banUntil.setDate(banUntil.getDate() + parseInt(days));
-                updateUser(userId, { is_active: false, ban_until: banUntil.toISOString() });
+        function banUser(userId, email, isBanned) {
+            if (isBanned) {
+                // Разбанить пользователя
+                if (confirm(`Вы уверены, что хотите разбанить пользователя ${email}?`)) {
+                    updateUser(userId, { is_active: true, ban_until: null });
+                }
+            } else {
+                // Забанить пользователя
+                const days = prompt('Забанить на сколько дней?', '7');
+                if (days && !isNaN(days)) {
+                    const banUntil = new Date();
+                    banUntil.setDate(banUntil.getDate() + parseInt(days));
+                    updateUser(userId, { is_active: false, ban_until: banUntil.toISOString() });
+                }
             }
         }
 
