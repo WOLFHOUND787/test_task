@@ -356,8 +356,8 @@
             document.getElementById('logoutBtn').style.display = 'block';  // Показываем выход
             
             // Показываем нужные кнопки в зависимости от роли
-            const isManager = currentUser.roles && currentUser.roles.some(role => role.name === 'manager');
-            const isAdmin = currentUser.roles && currentUser.roles.some(role => role.name === 'admin');
+            const isManager = currentUser.roles && (typeof currentUser.roles[0] === 'string' ? currentUser.roles.includes('manager') : currentUser.roles.some(role => role.name === 'manager'));
+            const isAdmin = currentUser.roles && (typeof currentUser.roles[0] === 'string' ? currentUser.roles.includes('admin') : currentUser.roles.some(role => role.name === 'admin'));
             
             // Все видят магазины, менеджеры дополнительно видят управление
             document.getElementById('shopsBtn').style.display = 'block';
@@ -508,7 +508,7 @@
                     
                     data.products.forEach(product => {
                         // Менеджеры не могут заказывать продукты вообще
-                        const isManager = currentUser.roles && currentUser.roles.some(role => role.name === 'manager');
+                        const isManager = currentUser.roles && (typeof currentUser.roles[0] === 'string' ? currentUser.roles.includes('manager') : currentUser.roles.some(role => role.name === 'manager'));
                         const orderButton = isManager ? '' : `<button class="btn btn-success" onclick="showOrderModal('${product.id}', '${product.name}', ${product.price})">🛒 Заказать</button>`;
                         
                         const productCard = `
@@ -1012,7 +1012,7 @@
                                     <h6>${user.full_name || user.email}</h6>
                                     <p class="mb-1">
                                         📧 ${user.email}<br>
-                                        🎭 Роль: ${user.roles.map(r => r.name).join(', ')}<br>
+                                        🎭 Роль: ${typeof user.roles[0] === 'string' ? user.roles.join(', ') : user.roles.map(r => r.name).join(', ')}<br>
                                         📅 Создан: ${new Date(user.created_at).toLocaleDateString()}
                                     </p>
                                 </div>
@@ -1048,7 +1048,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Роль</label>
-                                <input type="text" class="form-control" value="${data.roles && data.roles.length > 0 ? data.roles.map(r => r.name).join(', ') : 'Нет роли'}" readonly>
+                                <input type="text" class="form-control" value="${data.roles && data.roles.length > 0 ? (typeof data.roles[0] === 'string' ? data.roles.join(', ') : data.roles.map(r => r.name).join(', ')) : 'Нет роли'}" readonly>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Дата регистрации</label>
@@ -1172,7 +1172,7 @@
                 if (response.ok) {
                     alert('Заказ успешно отменен!');
                     // Проверяем роль пользователя для правильного перенаправления
-                    const isManager = currentUser.roles && currentUser.roles.some(role => role.name === 'manager');
+                    const isManager = currentUser.roles && (typeof currentUser.roles[0] === 'string' ? currentUser.roles.includes('manager') : currentUser.roles.some(role => role.name === 'manager'));
                     if (isManager) {
                         showManageShop(); // Менеджеры остаются в управлении магазином
                     } else {
@@ -1202,7 +1202,7 @@
                 if (response.ok) {
                     alert('Заказ успешно удален!');
                     // Проверяем роль пользователя для правильного перенаправления
-                    const isManager = currentUser.roles && currentUser.roles.some(role => role.name === 'manager');
+                    const isManager = currentUser.roles && (typeof currentUser.roles[0] === 'string' ? currentUser.roles.includes('manager') : currentUser.roles.some(role => role.name === 'manager'));
                     if (isManager) {
                         showManageShop(); // Менеджеры остаются в управлении магазином
                     } else {
