@@ -332,14 +332,11 @@ def order_cancel_view(request, order_id):
     except Order.DoesNotExist:
         return Response({'error': 'Order not found'}, status=404)
     
-    # Проверяем права: только владелец заказа или менеджер продукта могут отменить
+    # Проверяем права: только владелец заказа может отменить (менеджеры не могут)
     if not user.is_superuser:
-        # Владелец заказа может отменить
+        # Только владелец заказа может отменить
         if order.customer != user:
-            # Менеджер может отменить заказы на свои продукты
-            user_shops = Shop.objects.filter(owner=user)
-            if not Order.objects.filter(id=order_id, product__shop__in=user_shops).exists():
-                return Response({'error': 'Insufficient permissions'}, status=403)
+            return Response({'error': 'Insufficient permissions'}, status=403)
     
     if order.status != 'pending':
         return Response({'error': 'Order cannot be cancelled'}, status=400)

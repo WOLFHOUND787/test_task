@@ -147,7 +147,7 @@
         <div id="mainSection" class="hide">
             <!-- Навигация по разделам -->
             <div class="btn-group mb-4" role="group">
-                <button type="button" class="btn btn-outline-primary" onclick="showShops()">🏪 Магазины</button>
+                <button type="button" class="btn btn-outline-primary" id="shopsBtn" onclick="showShops()">🏪 Магазины</button>
                 <button type="button" class="btn btn-outline-primary" id="ordersBtn" onclick="showOrders()">📦 Мои заказы</button>
                 <button type="button" class="btn btn-outline-primary" id="manageShopBtn" onclick="showManageShop()" style="display: none;">⚙️ Управление магазином</button>
                 <button type="button" class="btn btn-outline-primary" id="usersBtn" onclick="showUsers()" style="display: none;">👥 Пользователи</button>
@@ -355,17 +355,21 @@
             document.getElementById('logoutBtn').style.display = 'block';  // Показываем выход
             
             // Показываем нужные кнопки в зависимости от роли
-            const isManager = currentUser.roles.some(r => r.name === 'manager');
-            const isAdmin = currentUser.roles.some(r => r.name === 'admin');
+            const isManager = currentUser.roles && currentUser.roles.some(role => role.name === 'manager');
+            const isAdmin = currentUser.roles && currentUser.roles.some(role => role.name === 'admin');
             
+            // Все видят магазины, менеджеры дополнительно видят управление
+            document.getElementById('shopsBtn').style.display = 'block';
+            document.getElementById('ordersBtn').style.display = isManager ? 'none' : 'block';
             document.getElementById('manageShopBtn').style.display = isManager ? 'block' : 'none';
             document.getElementById('usersBtn').style.display = isAdmin ? 'block' : 'none';
             
-            // Менеджерам не показываем "мои заказы"
-            document.getElementById('ordersBtn').style.display = isManager ? 'none' : 'block';
-            
-            // По умолчанию показываем магазины
-            showShops();
+            // По умолчанию показываем нужную секцию в зависимости от роли
+            if (isManager) {
+                showManageShop(); // Менеджеры сразу видят управление магазином
+            } else {
+                showShops(); // Пользователи видят магазины
+            }
         }
 
         // Вход
@@ -502,8 +506,8 @@
                     productsList.innerHTML = '';
                     
                     data.products.forEach(product => {
-                        // Проверяем что текущий пользователь не менеджер
-                        const isManager = currentUser.roles && currentUser.roles.includes('manager');
+                        // Менеджеры не могут заказывать продукты вообще
+                        const isManager = currentUser.roles && currentUser.roles.some(role => role.name === 'manager');
                         const orderButton = isManager ? '' : `<button class="btn btn-success" onclick="showOrderModal('${product.id}', '${product.name}', ${product.price})">🛒 Заказать</button>`;
                         
                         const productCard = `
@@ -741,7 +745,7 @@
                             
                             if (order.status === 'pending') {
                                 statusText = '⏳ В обработке';
-                                buttons = `<button class="btn btn-sm btn-success" onclick="completeOrder('${order.id}')">Выполнить</button> <button class="btn btn-sm btn-danger" onclick="cancelOrder('${order.id}')">Отменить</button>`;
+                                buttons = `<button class="btn btn-sm btn-success" onclick="completeOrder('${order.id}')">Выполнить</button>`;
                             } else if (order.status === 'completed') {
                                 statusText = '✅ Выполнен';
                                 buttons = '';
@@ -1042,7 +1046,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Роль</label>
-                                <input type="text" class="form-control" value="${data.roles ? data.roles.map(r => r.name).join(', ') : 'Загрузка...'}" readonly>
+                                <input type="text" class="form-control" value="${data.roles && data.roles.length > 0 ? data.roles.map(r => r.name).join(', ') : 'Нет роли'}" readonly>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Дата регистрации</label>
@@ -1165,7 +1169,13 @@
                 
                 if (response.ok) {
                     alert('Заказ успешно отменен!');
-                    showOrders(); // Обновляем список заказов
+                    // Проверяем роль пользователя для правильного перенаправления
+                    const isManager = currentUser.roles && currentUser.roles.some(role => role.name === 'manager');
+                    if (isManager) {
+                        showManageShop(); // Менеджеры остаются в управлении магазином
+                    } else {
+                        showOrders(); // Пользователи переходят к своим заказам
+                    }
                 } else {
                     const error = await response.json();
                     alert('Ошибка отмены заказа: ' + (error.error || 'Ошибка'));
@@ -1189,7 +1199,13 @@
                 
                 if (response.ok) {
                     alert('Заказ успешно удален!');
-                    showOrders(); // Обновляем список заказов
+                    // Проверяем роль пользователя для правильного перенаправления
+                    const isManager = currentUser.roles && currentUser.roles.some(role => role.name === 'manager');
+                    if (isManager) {
+                        showManageShop(); // Менеджеры остаются в управлении магазином
+                    } else {
+                        showOrders(); // Пользователи переходят к своим заказам
+                    }
                 } else {
                     const error = await response.json();
                     alert('Ошибка удаления заказа: ' + (error.error || 'Ошибка'));
