@@ -74,6 +74,30 @@ def product_list_view(request):
     return Response({'products': product_data})
 
 
+@api_view(['DELETE'])
+@permission_classes([CustomObjectPermissionFactory('shops', 'delete')])
+def shop_delete_view(request, shop_id):
+    """Удалить магазин"""
+    user = request.user
+    
+    try:
+        shop = Shop.objects.get(id=shop_id)
+    except Shop.DoesNotExist:
+        return Response({'error': 'Shop not found'}, status=404)
+    
+    # Проверяем что это владелец магазина или суперпользователь
+    if not user.is_superuser and shop.owner != user:
+        return Response({'error': 'Insufficient permissions'}, status=403)
+    
+    # Проверяем что у магазина нет заказов
+    if Order.objects.filter(product__shop=shop, status='pending').exists():
+        return Response({'error': 'Cannot delete shop with pending orders'}, status=400)
+    
+    shop.delete()
+    
+    return Response({'message': 'Shop deleted successfully'})
+
+
 @api_view(['POST'])
 @permission_classes([CustomObjectPermissionFactory('products', 'create')])
 def product_create_view(request):

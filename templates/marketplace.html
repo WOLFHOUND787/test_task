@@ -181,8 +181,9 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card">
-                            <div class="card-header">
+                            <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5>Мой магазин</h5>
+                                <button class="btn btn-success btn-sm" onclick="showCreateShopForm()">➕ Создать магазин</button>
                             </div>
                             <div class="card-body" id="myShopInfo">
                                 <p class="text-muted">Загрузка информации о магазине...</p>
@@ -713,6 +714,7 @@
                                             📅 Создан: ${new Date(shop.created_at).toLocaleDateString()}
                                         </p>
                                         <button class="btn btn-sm btn-outline-primary" onclick="editShop('${shop.id}')">Редактировать</button>
+                                        <button class="btn btn-sm btn-danger ms-2" onclick="deleteShop('${shop.id}', '${shop.name}')">Удалить</button>
                                     </div>
                                 </div>
                             `;
@@ -1209,6 +1211,34 @@
                 } else {
                     const error = await response.json();
                     alert('Ошибка удаления заказа: ' + (error.error || 'Ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети');
+            }
+        }
+
+        // Удалить магазин
+        async function deleteShop(shopId, shopName) {
+            if (!confirm(`Вы уверены, что хотите удалить магазин "${shopName}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/business/shops/${shopId}/delete/`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                
+                if (response.ok) {
+                    alert('Магазин успешно удален!');
+                    showShops(); // Обновляем список магазинов
+                    // Если мы в управлении магазином, тоже обновляем
+                    if (document.getElementById('manageShopSection').classList.contains('hide') === false) {
+                        showManageShop();
+                    }
+                } else {
+                    const error = await response.json();
+                    alert('Ошибка удаления магазина: ' + (error.error || 'Ошибка'));
                 }
             } catch (error) {
                 alert('Ошибка сети');
