@@ -26,17 +26,56 @@ class RegisterView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-        # Назначаем роль "user" по умолчанию
-        try:
-            user_role = Role.objects.get(name='user')
-            UserRole.objects.create(user=user, role=user_role)
-        except Role.DoesNotExist:
-            pass
+        # Автоматически логиним пользователя после регистрации
+        import jwt
+        from django.conf import settings
+        from django.utils import timezone
+        import datetime
         
-        return Response(
-            {'message': 'User registered successfully'},
-            status=status.HTTP_201_CREATED
+        # Создаем токены
+        now = datetime.datetime.utcnow()
+        access_payload = {
+            'type': 'access',
+            'user': str(user.id),
+            'email': user.email,
+            'jti': str(user.id) + '_access',
+            'exp': int((now + datetime.timedelta(minutes=15)).timestamp()),
+            'iat': int(now.timestamp())
+        }
+        refresh_payload = {
+            'type': 'refresh',
+            'user': str(user.id),
+            'email': user.email,
+            'jti': str(user.id) + '_refresh',
+            'exp': int((now + datetime.timedelta(days=7)).timestamp()),
+            'iat': int(now.timestamp())
+        }
+        
+        access_token = jwt.encode(access_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+        refresh_token = jwt.encode(refresh_payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+        
+        # Создаем сессию
+        from authentication.models import Session
+        session = Session.objects.create(
+            user=user,
+            access_jti=access_payload['jti'],
+            refresh_jti=refresh_payload['jti'],
+            access_expires_at=timezone.now() + timezone.timedelta(minutes=15),
+            refresh_expires_at=timezone.now() + timezone.timedelta(days=7),
+            is_active=True
         )
+        
+        return Response({
+            'message': 'User registered successfully',
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'user': {
+                'id': str(user.id),
+                'email': user.email,
+                'full_name': user.full_name,
+                'roles': [ur.role.name for ur in user.user_roles.all()]
+            }
+        }, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])

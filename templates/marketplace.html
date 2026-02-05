@@ -116,8 +116,12 @@
                                         <input type="email" class="form-control" id="regEmail" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label for="regFullName" class="form-label">Полное имя</label>
-                                        <input type="text" class="form-control" id="regFullName" required>
+                                        <label for="regFirstName" class="form-label">Имя</label>
+                                        <input type="text" class="form-control" id="regFirstName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="regLastName" class="form-label">Фамилия</label>
+                                        <input type="text" class="form-control" id="regLastName" required>
                                     </div>
                                     <div class="mb-3">
                                         <label for="regPassword" class="form-label">Пароль</label>
@@ -408,7 +412,8 @@
         document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const email = document.getElementById('regEmail').value;
-            const full_name = document.getElementById('regFullName').value;
+            const first_name = document.getElementById('regFirstName').value;
+            const last_name = document.getElementById('regLastName').value;
             const password = document.getElementById('regPassword').value;
             const password_confirm = document.getElementById('regPasswordConfirm').value;
             const role = document.getElementById('regRole').value;
@@ -422,12 +427,21 @@
                 const response = await fetch(`${API_BASE}/auth/register/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, full_name, password, password_confirm, role })
+                    body: JSON.stringify({ email, first_name, last_name, password, password_confirm, role })
                 });
                 
                 if (response.ok) {
-                    alert('Регистрация успешна! Теперь войдите в систему.');
-                    document.getElementById('register-tab').click();
+                    const data = await response.json();
+                    alert('Регистрация успешна! Вы вошли в систему.');
+                    
+                    // Автоматически логиним пользователя
+                    localStorage.setItem('accessToken', data.access_token);
+                    localStorage.setItem('refreshToken', data.refresh_token);
+                    accessToken = data.access_token;
+                    currentUser = data.user;
+                    
+                    // Показываем основной интерфейс
+                    showMain();
                 } else {
                     const error = await response.json();
                     alert('Ошибка регистрации: ' + JSON.stringify(error));

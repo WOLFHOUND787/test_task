@@ -10,7 +10,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['email', 'full_name', 'password', 'password_confirm', 'role']
+        fields = ['email', 'first_name', 'last_name', 'password', 'password_confirm', 'role']
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -21,12 +21,89 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         validated_data.pop('password_confirm')
         role_name = validated_data.pop('role', 'user')
         
-        user = User.objects.create_user(**validated_data)
+        user = User.objects.create_user(
+            email=validated_data['email'],
+            password=validated_data['password'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name']
+        )
         
         # Назначаем выбранную роль
         try:
             role = Role.objects.get(name=role_name)
-            UserRole.objects.create(user=user, role=role)
+            # Проверяем что у пользователя еще нет такой роли
+            if not UserRole.objects.filter(user=user, role=role).exists():
+                UserRole.objects.create(user=user, role=role)
+                
+                # Создаем базовые права для новой роли
+                from authentication.models import BusinessElement, AccessRoleRule
+                
+                # Создаем базовые элементы если их нет
+                basic_elements = ['shops', 'products', 'orders']
+                for element_name in basic_elements:
+                    BusinessElement.objects.get_or_create(
+                        name=element_name,
+                        defaults={
+                            'description': f'Бизнес-элемент {element_name}',
+                            'has_owner_field': True,
+                            'is_active': True
+                        }
+                    )
+                
+                if role_name == 'user':
+                    # Даем права пользователя на чтение магазинов, продуктов, заказов
+                    elements_data = [
+                        ('shops', True, False, False, False, False),  # read
+                        ('products', True, False, False, False, False),  # read
+                        ('orders', True, False, False, False, False),  # read
+                    ]
+                elif role_name == 'manager':
+                    # Даем полные права менеджера
+                    elements_data = [
+                        ('shops', True, True, True, True, True),  # все права
+                        ('products', True, True, True, True, True),  # все права
+                        ('orders', True, True, True, True, True),  # все права
+                    ]
+                else:
+                    elements_data = []
+                
+                for element_data in elements_data:
+                    element_name, read_perm, read_all, create_perm, update_all, delete_all = element_data
+                    try:
+                        element = BusinessElement.objects.get(name=element_name, is_active=True)
+                        AccessRoleRule.objects.get_or_create(
+                            role=role,
+                            element=element,
+                            defaults={
+                                'read_permission': read_perm,
+                                'read_all_permission': read_all,
+                                'create_permission': create_perm,
+                                'update_permission': update_all,
+                                'update_all_permission': update_all,
+                                'delete_permission': delete_all,
+                                'delete_all_permission': delete_all,
+                            }
+                        )
+                    except BusinessElement.DoesNotExist:
+                        # Если элемента нет, создаем его
+                        element = BusinessElement.objects.create(
+                            name=element_name,
+                            description=f'Элемент {element_name}',
+                            has_owner_field=True,
+                            is_active=True
+                        )
+                        AccessRoleRule.objects.create(
+                            role=role,
+                            element=element,
+                            read_permission=read_perm,
+                            read_all_permission=read_all,
+                            create_permission=create_perm,
+                            update_permission=update_all,
+                            update_all_permission=update_all,
+                            delete_permission=delete_all,
+                            delete_all_permission=delete_all,
+                        )
+                        
         except Role.DoesNotExist:
             pass
         
