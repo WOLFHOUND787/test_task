@@ -401,7 +401,7 @@
                     showMain();
                 } else {
                     const error = await response.json();
-                    alert('Ошибка входа: ' + (error.detail || 'Неверные данные'));
+                    alert('Ошибка входа: ' + (error.error || error.detail || 'Неверные данные'));
                 }
             } catch (error) {
                 alert('Ошибка сети');

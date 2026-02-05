@@ -83,18 +83,20 @@ class RegisterView(generics.CreateAPIView):
 def login_view(request):
     """Вход пользователя в систему"""
     serializer = UserLoginSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
+    
+    if not serializer.is_valid():
+        errors = serializer.errors
+        # Извлекаем сообщение об ошибке
+        if 'non_field_errors' in errors:
+            error_message = errors['non_field_errors'][0]
+        elif 'error' in errors:
+            error_message = errors['error'][0]
+        else:
+            error_message = 'Неверные данные'
+            
+        return Response({'error': error_message}, status=400)
     
     user = serializer.validated_data['user']
-    
-    # Проверяем не забанен ли пользователь
-    if user.is_banned:
-        ban_message = "Ваш аккаунт забанен"
-        if user.ban_until:
-            ban_message += f" до {user.ban_until.strftime('%d.%m.%Y %H:%M')}"
-        else:
-            ban_message += " навсегда"
-        return Response({'error': ban_message}, status=403)
     
     # Генерируем access и refresh токены
     access_token, refresh_token, access_jti, refresh_jti = generate_jwt_tokens(user.id)

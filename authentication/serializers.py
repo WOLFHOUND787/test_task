@@ -127,9 +127,22 @@ class UserLoginSerializer(serializers.Serializer):
         password = attrs.get('password')
         
         try:
-            user = User.objects.get(email=email, is_active=True)
+            # Ищем пользователя независимо от is_active статуса
+            user = User.objects.get(email=email)
+            
+            # Проверяем пароль
             if not user.check_password(password):
                 raise serializers.ValidationError("Invalid credentials")
+            
+            # Проверяем не забанен ли пользователь
+            if user.is_banned:
+                ban_message = "Ваш аккаунт забанен"
+                if user.ban_until:
+                    ban_message += f" до {user.ban_until.strftime('%d.%m.%Y %H:%M')}"
+                else:
+                    ban_message += " навсегда"
+                raise serializers.ValidationError(ban_message)
+            
             attrs['user'] = user
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid credentials")
